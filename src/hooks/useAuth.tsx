@@ -12,9 +12,39 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Mock users for demo
 const mockUsers: (User & { password: string })[] = [
-  { id: '1', username: 'admin', password: 'admin123', role: 'admin', name: 'Admin User' },
-  { id: '2', username: 'manager', password: 'manager123', role: 'manager', name: 'Manager User' },
-  { id: '3', username: 'sales', password: 'sales123', role: 'salesman', name: 'Sales Person' },
+  { 
+    id: '1', 
+    username: 'admin', 
+    password: 'admin123', 
+    role: 'admin', 
+    name: 'Admin User',
+    email: 'admin@cafed.com',
+    phone: '+92-300-1234567',
+    isActive: true,
+    createdAt: new Date('2024-01-01')
+  },
+  { 
+    id: '2', 
+    username: 'manager', 
+    password: 'manager123', 
+    role: 'manager', 
+    name: 'Manager User',
+    email: 'manager@cafed.com',
+    phone: '+92-301-2345678',
+    isActive: true,
+    createdAt: new Date('2024-01-15')
+  },
+  { 
+    id: '3', 
+    username: 'sales', 
+    password: 'sales123', 
+    role: 'salesman', 
+    name: 'Sales Person',
+    email: 'sales@cafed.com',
+    phone: '+92-302-3456789',
+    isActive: true,
+    createdAt: new Date('2024-02-01')
+  },
 ];
 
 export function AuthProvider({ children }: { children: ReactNode }) {

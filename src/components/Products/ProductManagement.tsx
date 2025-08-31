@@ -23,7 +23,8 @@ export function ProductManagement() {
     category: '',
     price: '',
     stock: '',
-    description: ''
+    description: '',
+    imageUrl: ''
   });
 
   const filteredProducts = products.filter(product => {
@@ -46,7 +47,8 @@ export function ProductManagement() {
               category: formData.category,
               price: Number(formData.price),
               stock: Number(formData.stock),
-              description: formData.description
+              description: formData.description,
+              imageUrl: formData.imageUrl
             }
           : p
       ));
@@ -58,12 +60,13 @@ export function ProductManagement() {
         category: formData.category,
         price: Number(formData.price),
         stock: Number(formData.stock),
-        description: formData.description
+        description: formData.description,
+        imageUrl: formData.imageUrl
       };
       setProducts([...products, newProduct]);
     }
     
-    setFormData({ name: '', category: '', price: '', stock: '', description: '' });
+    setFormData({ name: '', category: '', price: '', stock: '', description: '', imageUrl: '' });
     setShowAddForm(false);
   };
 
@@ -74,7 +77,8 @@ export function ProductManagement() {
       category: product.category,
       price: product.price.toString(),
       stock: product.stock.toString(),
-      description: product.description || ''
+      description: product.description || '',
+      imageUrl: product.imageUrl || ''
     });
     setShowAddForm(true);
   };
@@ -96,7 +100,7 @@ export function ProductManagement() {
           onClick={() => {
             setShowAddForm(true);
             setEditingProduct(null);
-            setFormData({ name: '', category: '', price: '', stock: '', description: '' });
+            setFormData({ name: '', category: '', price: '', stock: '', description: '', imageUrl: '' });
           }}
           className="bg-amber-900 text-white px-4 py-2 rounded-lg hover:bg-amber-800 transition-colors flex items-center space-x-2"
         >
@@ -163,7 +167,18 @@ export function ProductManagement() {
                 <tr key={product.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="h-10 w-10 bg-gradient-to-br from-amber-100 to-orange-100 rounded-lg flex items-center justify-center mr-3">
+                      {product.imageUrl ? (
+                        <img 
+                          src={product.imageUrl} 
+                          alt={product.name}
+                          className="h-10 w-10 rounded-lg object-cover mr-3"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextElementSibling!.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div className={`h-10 w-10 bg-gradient-to-br from-amber-100 to-orange-100 rounded-lg flex items-center justify-center mr-3 ${product.imageUrl ? 'hidden' : ''}`}>
                         <Package className="w-5 h-5 text-amber-700" />
                       </div>
                       <div>
@@ -273,6 +288,16 @@ export function ProductManagement() {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                   rows={2}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
+                <input
+                  type="url"
+                  value={formData.imageUrl}
+                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  placeholder="https://example.com/image.jpg"
                 />
               </div>
               <div className="flex space-x-3 pt-4">

@@ -8,6 +8,7 @@ import { ProductManagement } from './components/Products/ProductManagement';
 import { CustomerManagement } from './components/Customers/CustomerManagement';
 import { CardManagement } from './components/Cards/CardManagement';
 import { Reports } from './components/Reports/Reports';
+import { Settings } from './components/Settings/Settings';
 
 function AppContent() {
   const { isAuthenticated } = useAuth();
@@ -31,6 +32,8 @@ function AppContent() {
         return <CardManagement />;
       case 'reports':
         return <Reports />;
+      case 'settings':
+        return <Settings />;
       default:
         return <Dashboard />;
     }

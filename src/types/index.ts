@@ -1,8 +1,14 @@
+export type UserRole = 'admin' | 'manager' | 'salesman';
+
 export interface User {
   id: string;
   username: string;
-  role: 'admin' | 'manager' | 'salesman';
+  role: UserRole;
   name: string;
+  email?: string;
+  phone?: string;
+  isActive: boolean;
+  createdAt: Date;
 }
 
 export interface Product {
@@ -13,6 +19,7 @@ export interface Product {
   stock: number;
   description?: string;
   image?: string;
+  imageUrl?: string;
 }
 
 export interface Category {

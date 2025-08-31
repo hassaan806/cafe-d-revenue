@@ -67,8 +67,7 @@ export function SalesPOS() {
   };
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.total, 0);
-  const tax = subtotal * 0.16; // 16% GST
-  const total = subtotal + tax;
+  const total = subtotal; // Removed GST calculation
 
   const handleCheckout = () => {
     if (cartItems.length === 0) return;
@@ -80,7 +79,6 @@ export function SalesPOS() {
     console.log('Processing sale:', {
       items: cartItems,
       subtotal,
-      tax,
       total,
       paymentMethod,
       customerId: selectedCustomer,
@@ -146,8 +144,21 @@ export function SalesPOS() {
               className="bg-white rounded-lg shadow-md border border-gray-200 p-4 cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => addToCart(product)}
             >
-              <div className="h-24 bg-gradient-to-br from-amber-100 to-orange-100 rounded-lg mb-3 flex items-center justify-center">
-                <Package className="w-8 h-8 text-amber-700" />
+              <div className="h-24 bg-gradient-to-br from-amber-100 to-orange-100 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+                {product.imageUrl ? (
+                  <img 
+                    src={product.imageUrl} 
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.nextElementSibling!.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <div className={`w-full h-full flex items-center justify-center ${product.imageUrl ? 'hidden' : ''}`}>
+                  <Package className="w-8 h-8 text-amber-700" />
+                </div>
               </div>
               <h3 className="font-semibold text-gray-900 text-sm mb-1">{product.name}</h3>
               <p className="text-xs text-gray-600 mb-2">{product.category}</p>
@@ -270,15 +281,7 @@ export function SalesPOS() {
         {cartItems.length > 0 && (
           <>
             <div className="border-t border-gray-200 pt-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Subtotal:</span>
-                <span>PKR {subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>GST (16%):</span>
-                <span>PKR {tax.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-lg font-bold border-t border-gray-200 pt-2">
+              <div className="flex justify-between text-lg font-bold">
                 <span>Total:</span>
                 <span>PKR {total.toFixed(2)}</span>
               </div>

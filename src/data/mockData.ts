@@ -10,31 +10,31 @@ export const categories: Category[] = [
 
 export const products: Product[] = [
   // Hot Beverages
-  { id: '1', name: 'Espresso', category: 'Hot Beverages', price: 150, stock: 100 },
-  { id: '2', name: 'Cappuccino', category: 'Hot Beverages', price: 200, stock: 85 },
-  { id: '3', name: 'Latte', category: 'Hot Beverages', price: 220, stock: 92 },
-  { id: '4', name: 'Americano', category: 'Hot Beverages', price: 180, stock: 78 },
-  { id: '5', name: 'Green Tea', category: 'Hot Beverages', price: 120, stock: 45 },
+  { id: '1', name: 'Espresso', category: 'Hot Beverages', price: 150, stock: 100, imageUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=200&h=200&fit=crop' },
+  { id: '2', name: 'Cappuccino', category: 'Hot Beverages', price: 200, stock: 85, imageUrl: 'https://images.unsplash.com/photo-1572442388796-11668a64e546?w=200&h=200&fit=crop' },
+  { id: '3', name: 'Latte', category: 'Hot Beverages', price: 220, stock: 92, imageUrl: 'https://images.unsplash.com/photo-1578314675249-a6910f80cc4e?w=200&h=200&fit=crop' },
+  { id: '4', name: 'Americano', category: 'Hot Beverages', price: 180, stock: 78, imageUrl: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=200&h=200&fit=crop' },
+  { id: '5', name: 'Green Tea', category: 'Hot Beverages', price: 120, stock: 45, imageUrl: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop' },
   
   // Cold Beverages
-  { id: '6', name: 'Iced Coffee', category: 'Cold Beverages', price: 200, stock: 67 },
-  { id: '7', name: 'Mango Smoothie', category: 'Cold Beverages', price: 300, stock: 34 },
-  { id: '8', name: 'Fresh Orange Juice', category: 'Cold Beverages', price: 250, stock: 28 },
-  { id: '9', name: 'Iced Tea', category: 'Cold Beverages', price: 150, stock: 52 },
+  { id: '6', name: 'Iced Coffee', category: 'Cold Beverages', price: 200, stock: 67, imageUrl: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=200&h=200&fit=crop' },
+  { id: '7', name: 'Mango Smoothie', category: 'Cold Beverages', price: 300, stock: 34, imageUrl: 'https://images.unsplash.com/photo-1505252585461-04db1eb84625?w=200&h=200&fit=crop' },
+  { id: '8', name: 'Fresh Orange Juice', category: 'Cold Beverages', price: 250, stock: 28, imageUrl: 'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=200&h=200&fit=crop' },
+  { id: '9', name: 'Iced Tea', category: 'Cold Beverages', price: 150, stock: 52, imageUrl: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=200&h=200&fit=crop' },
   
   // Pastries
-  { id: '10', name: 'Chocolate Croissant', category: 'Pastries', price: 180, stock: 24 },
-  { id: '11', name: 'Blueberry Muffin', category: 'Pastries', price: 160, stock: 18 },
-  { id: '12', name: 'Cheese Danish', category: 'Pastries', price: 200, stock: 15 },
+  { id: '10', name: 'Chocolate Croissant', category: 'Pastries', price: 180, stock: 24, imageUrl: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=200&h=200&fit=crop' },
+  { id: '11', name: 'Blueberry Muffin', category: 'Pastries', price: 160, stock: 18, imageUrl: 'https://images.unsplash.com/photo-1607958996332-8c204a43951a?w=200&h=200&fit=crop' },
+  { id: '12', name: 'Cheese Danish', category: 'Pastries', price: 200, stock: 15, imageUrl: 'https://images.unsplash.com/photo-1607478900766-efe42c0b1c8e?w=200&h=200&fit=crop' },
   
   // Snacks
-  { id: '13', name: 'Club Sandwich', category: 'Snacks', price: 400, stock: 12 },
-  { id: '14', name: 'Chicken Wrap', category: 'Snacks', price: 350, stock: 20 },
-  { id: '15', name: 'Veggie Burger', category: 'Snacks', price: 320, stock: 8 },
+  { id: '13', name: 'Club Sandwich', category: 'Snacks', price: 400, stock: 12, imageUrl: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=200&h=200&fit=crop' },
+  { id: '14', name: 'Chicken Wrap', category: 'Snacks', price: 350, stock: 20, imageUrl: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=200&h=200&fit=crop' },
+  { id: '15', name: 'Veggie Burger', category: 'Snacks', price: 320, stock: 8, imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200&h=200&fit=crop' },
   
   // Desserts
-  { id: '16', name: 'Chocolate Cake', category: 'Desserts', price: 280, stock: 6 },
-  { id: '17', name: 'Vanilla Ice Cream', category: 'Desserts', price: 120, stock: 35 },
+  { id: '16', name: 'Chocolate Cake', category: 'Desserts', price: 280, stock: 6, imageUrl: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=200&h=200&fit=crop' },
+  { id: '17', name: 'Vanilla Ice Cream', category: 'Desserts', price: 120, stock: 35, imageUrl: 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=200&h=200&fit=crop' },
 ];
 
 export const customers: Customer[] = [
