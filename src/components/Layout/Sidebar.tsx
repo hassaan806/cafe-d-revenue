@@ -20,18 +20,14 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
   const { user, logout } = useAuth();
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home, roles: ['admin', 'manager', 'salesman'] },
-    { id: 'sales', label: 'Sales POS', icon: ShoppingCart, roles: ['admin', 'manager', 'salesman'] },
-    { id: 'products', label: 'Products', icon: Package, roles: ['admin', 'manager'] },
-    { id: 'customers', label: 'Customers', icon: Users, roles: ['admin', 'manager'] },
-    { id: 'cards', label: 'Card Management', icon: CreditCard, roles: ['admin'] },
-    { id: 'reports', label: 'Reports', icon: BarChart3, roles: ['admin', 'manager'] },
-    { id: 'settings', label: 'Settings', icon: Settings, roles: ['admin'] },
+    { id: 'dashboard', label: 'Dashboard', icon: Home },
+    { id: 'sales', label: 'Sales POS', icon: ShoppingCart },
+    { id: 'products', label: 'Products', icon: Package },
+    { id: 'customers', label: 'Customers', icon: Users },
+    { id: 'cards', label: 'Card Management', icon: CreditCard },
+    { id: 'reports', label: 'Reports', icon: BarChart3 },
+    { id: 'settings', label: 'Settings', icon: Settings },
   ];
-
-  const availableItems = menuItems.filter(item => 
-    user && item.roles.includes(user.role)
-  );
 
   return (
     <div className="w-64 bg-gradient-to-b from-amber-800 to-amber-900 text-white flex flex-col shadow-xl">
@@ -53,7 +49,7 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
       {/* Navigation - Scrollable */}
       <div className="flex-1 overflow-y-auto py-4">
         <nav className="space-y-1 px-2">
-          {availableItems.map((item) => {
+          {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeView === item.id;
             

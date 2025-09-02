@@ -28,12 +28,22 @@ export interface Category {
   description?: string;
 }
 
+export interface RechargeTransaction {
+  id: string;
+  customerId: string;
+  amount: number;
+  previousBalance: number;
+  newBalance: number;
+  timestamp: Date;
+}
+
 export interface Customer {
   id: string;
   name: string;
   phone: string;
   address?: string;
   cardRefId: string;
+  rfId?: string;
   balance: number;
   createdAt: Date;
 }

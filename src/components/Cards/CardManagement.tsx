@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { customers } from '../../data/mockData';
 import { 
   CreditCard, 
@@ -6,21 +6,78 @@ import {
   DollarSign, 
   Activity,
   TrendingUp,
-  Search,
-  Calendar
+  Search
 } from 'lucide-react';
+import { NewCardForm } from './NewCardForm';
+import { RechargeForm } from './RechargeForm';
+import { RechargeHistory } from './RechargeHistory';
+import { Customer, RechargeTransaction } from '../../types';
 
 export function CardManagement() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [isNewCardFormOpen, setIsNewCardFormOpen] = useState(false);
+  const [isRechargeFormOpen, setIsRechargeFormOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [customersList, setCustomersList] = useState<Customer[]>(customers);
+  const [rechargeHistory, setRechargeHistory] = useState<RechargeTransaction[]>([]);
 
-  const filteredCustomers = customers.filter(customer =>
+  const filteredCustomers = customersList.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.cardRefId.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const totalCards = customers.length;
-  const totalBalance = customers.reduce((sum, customer) => sum + customer.balance, 0);
-  const activeCards = customers.filter(c => c.balance > 0).length;
+  const totalCards = customersList.length;
+  const totalBalance = customersList.reduce((sum, customer) => sum + customer.balance, 0);
+  const activeCards = customersList.filter(c => c.balance > 0).length;
+
+  const handleSaveNewCard = (newCustomer: Omit<Customer, 'id' | 'createdAt'>) => {
+    const customer: Customer = {
+      ...newCustomer,
+      id: (customersList.length + 1).toString(),
+      createdAt: new Date()
+    };
+    setCustomersList(prev => [...prev, customer]);
+  };
+
+  const handleRecharge = (customerId: string, amount: number) => {
+    const customer = customersList.find(c => c.id === customerId);
+    if (customer) {
+      const previousBalance = customer.balance;
+      const newBalance = previousBalance + amount;
+      
+      // Update customer balance
+      setCustomersList(prev => 
+        prev.map(c => 
+          c.id === customerId 
+            ? { ...c, balance: newBalance }
+            : c
+        )
+      );
+
+      // Add transaction to history
+      const transaction: RechargeTransaction = {
+        id: `recharge_${Date.now()}_${customerId}`,
+        customerId,
+        amount,
+        previousBalance,
+        newBalance,
+        timestamp: new Date()
+      };
+      
+      setRechargeHistory(prev => [...prev, transaction]);
+    }
+  };
+
+  const handleRechargeClick = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setIsRechargeFormOpen(true);
+  };
+
+  const handleViewHistoryClick = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setIsHistoryOpen(true);
+  };
 
   const cardStats = [
     {
@@ -56,7 +113,10 @@ export function CardManagement() {
           <h1 className="text-2xl font-bold text-gray-900">Card Management</h1>
           <p className="text-gray-600">Monitor and manage customer prepaid cards</p>
         </div>
-        <button className="bg-amber-900 text-white px-4 py-2 rounded-lg hover:bg-amber-800 transition-colors flex items-center space-x-2">
+        <button 
+          onClick={() => setIsNewCardFormOpen(true)}
+          className="bg-amber-900 text-white px-4 py-2 rounded-lg hover:bg-amber-800 transition-colors flex items-center space-x-2"
+        >
           <Plus size={20} />
           <span>New Card</span>
         </button>
@@ -131,11 +191,17 @@ export function CardManagement() {
                 </span>
               </div>
               <div className="flex space-x-2">
-                <button className="flex-1 bg-green-600 text-white py-2 px-3 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center justify-center space-x-1">
+                <button 
+                  onClick={() => handleRechargeClick(customer)}
+                  className="flex-1 bg-green-600 text-white py-2 px-3 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center justify-center space-x-1"
+                >
                   <DollarSign size={14} />
                   <span>Recharge</span>
                 </button>
-                <button className="flex-1 border border-gray-300 text-gray-700 py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
+                <button 
+                  onClick={() => handleViewHistoryClick(customer)}
+                  className="flex-1 border border-gray-300 text-gray-700 py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                >
                   View History
                 </button>
               </div>
@@ -143,6 +209,36 @@ export function CardManagement() {
           </div>
         ))}
       </div>
+
+      {/* New Card Form Modal */}
+      <NewCardForm
+        isOpen={isNewCardFormOpen}
+        onClose={() => setIsNewCardFormOpen(false)}
+        onSave={handleSaveNewCard}
+        existingCustomers={customersList}
+      />
+
+      {/* Recharge Form Modal */}
+      <RechargeForm
+        isOpen={isRechargeFormOpen}
+        onClose={() => {
+          setIsRechargeFormOpen(false);
+          setSelectedCustomer(null);
+        }}
+        onRecharge={handleRecharge}
+        customer={selectedCustomer}
+      />
+
+      {/* Recharge History Modal */}
+      <RechargeHistory
+        isOpen={isHistoryOpen}
+        onClose={() => {
+          setIsHistoryOpen(false);
+          setSelectedCustomer(null);
+        }}
+        customer={selectedCustomer}
+        transactions={rechargeHistory}
+      />
     </div>
   );
 }
