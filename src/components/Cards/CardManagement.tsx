@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { customers } from '../../data/mockData';
+import { useCustomers } from '../../contexts/CustomerContext';
+import { useRecharges } from '../../contexts/RechargeContext';
 import { 
   CreditCard, 
   Plus, 
@@ -14,55 +15,54 @@ import { RechargeHistory } from './RechargeHistory';
 import { Customer, RechargeTransaction } from '../../types';
 
 export function CardManagement() {
+  const { customers: customersList, addCustomer } = useCustomers();
   const [searchTerm, setSearchTerm] = useState('');
   const [isNewCardFormOpen, setIsNewCardFormOpen] = useState(false);
   const [isRechargeFormOpen, setIsRechargeFormOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [customersList, setCustomersList] = useState<Customer[]>(customers);
   const [rechargeHistory, setRechargeHistory] = useState<RechargeTransaction[]>([]);
 
   const filteredCustomers = customersList.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.cardRefId.toLowerCase().includes(searchTerm.toLowerCase())
+    (customer.cardRefId || customer.card_number).toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (customer.rfId || customer.rfid_no)?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const totalCards = customersList.length;
   const totalBalance = customersList.reduce((sum, customer) => sum + customer.balance, 0);
   const activeCards = customersList.filter(c => c.balance > 0).length;
 
-  const handleSaveNewCard = (newCustomer: Omit<Customer, 'id' | 'createdAt'>) => {
-    const customer: Customer = {
-      ...newCustomer,
-      id: (customersList.length + 1).toString(),
-      createdAt: new Date()
-    };
-    setCustomersList(prev => [...prev, customer]);
+  const handleSaveNewCard = async (newCustomer: Omit<Customer, 'id' | 'createdAt'>) => {
+    try {
+      await addCustomer({
+        name: newCustomer.name,
+        phone: newCustomer.phone,
+        rfid_no: newCustomer.rfId || '',
+        card_number: newCustomer.cardRefId || '',
+        balance: newCustomer.balance || 0
+      });
+    } catch (error) {
+      console.error('Failed to create customer:', error);
+      // Error is handled by the context
+    }
   };
 
   const handleRecharge = (customerId: string, amount: number) => {
-    const customer = customersList.find(c => c.id === customerId);
+    const customer = customersList.find(c => c.id.toString() === customerId);
     if (customer) {
       const previousBalance = customer.balance;
       const newBalance = previousBalance + amount;
-      
-      // Update customer balance
-      setCustomersList(prev => 
-        prev.map(c => 
-          c.id === customerId 
-            ? { ...c, balance: newBalance }
-            : c
-        )
-      );
 
       // Add transaction to history
       const transaction: RechargeTransaction = {
-        id: `recharge_${Date.now()}_${customerId}`,
-        customerId,
+        id: Date.now(), // Use timestamp as ID for local transactions
+        customer_id: parseInt(customerId),
         amount,
         previousBalance,
         newBalance,
-        timestamp: new Date()
+        timestamp: new Date(),
+        recharge_date: new Date().toISOString()
       };
       
       setRechargeHistory(prev => [...prev, transaction]);
@@ -144,7 +144,7 @@ export function CardManagement() {
         <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
         <input
           type="text"
-          placeholder="Search by customer name or card ID..."
+          placeholder="Search by customer name, card ID, or RF ID..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
@@ -160,7 +160,7 @@ export function CardManagement() {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <p className="text-xs opacity-80">CAFE D REVENUE</p>
-                  <p className="text-lg font-bold">{customer.cardRefId}</p>
+                  <p className="text-lg font-bold">{customer.cardRefId || customer.card_number}</p>
                 </div>
                 <CreditCard className="w-8 h-8 opacity-80" />
               </div>
@@ -175,7 +175,7 @@ export function CardManagement() {
                 </div>
                 <div className="text-right">
                   <p className="text-xs opacity-80">MEMBER SINCE</p>
-                  <p className="text-sm">{customer.createdAt.getFullYear()}</p>
+                  <p className="text-sm">{customer.createdAt ? customer.createdAt.getFullYear() : new Date(customer.created_at).getFullYear()}</p>
                 </div>
               </div>
             </div>

@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../../types';
+import { userService, UserResponse } from '../../services/userService';
+import { useAuth } from '../../hooks/useAuth';
 import { 
   Users, 
   Plus, 
@@ -10,45 +12,28 @@ import {
   Search,
   Shield,
   Mail,
-  Phone
+  Phone,
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 
-// Mock users data - in real app this would come from backend
-const initialUsers: User[] = [
-  {
-    id: '1',
-    username: 'admin',
-    role: 'admin',
-    name: 'Admin User',
-    email: 'admin@cafed.com',
-    phone: '+92-300-1234567',
-    isActive: true,
-    createdAt: new Date('2024-01-01')
-  },
-  {
-    id: '2',
-    username: 'manager1',
-    role: 'manager',
-    name: 'Manager One',
-    email: 'manager1@cafed.com',
-    phone: '+92-301-2345678',
-    isActive: true,
-    createdAt: new Date('2024-01-15')
-  },
-  {
-    id: '3',
-    username: 'salesman1',
-    role: 'salesman',
-    name: 'Sales Person',
-    email: 'sales@cafed.com',
-    phone: '+92-302-3456789',
-    isActive: true,
-    createdAt: new Date('2024-02-01')
-  }
-];
+// Helper function to convert API user to app user
+const convertApiUserToAppUser = (apiUser: UserResponse): User => ({
+  id: apiUser.id.toString(),
+  username: apiUser.username,
+  role: apiUser.role as UserRole,
+  name: apiUser.username, // Use username as name since API doesn't provide name
+  email: apiUser.email,
+  phone: undefined, // API doesn't provide phone
+  isActive: apiUser.is_active,
+  createdAt: new Date(apiUser.created_at)
+});
 
 export function Settings() {
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const { user: currentUser } = useAuth();
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,13 +41,31 @@ export function Settings() {
 
   const [formData, setFormData] = useState({
     username: '',
-    name: '',
     email: '',
-    phone: '',
     role: 'salesman' as UserRole,
     password: '',
     confirmPassword: ''
   });
+
+  // Fetch users on component mount
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const apiUsers = await userService.getUsers();
+        const appUsers = apiUsers.map(convertApiUserToAppUser);
+        setUsers(appUsers);
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch users');
+        console.error('Error fetching users:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
 
   const filteredUsers = users.filter(user => {
     const matchesRole = selectedRole === 'all' || user.role === selectedRole;
@@ -72,66 +75,72 @@ export function Settings() {
     return matchesRole && matchesSearch;
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match!');
+    if (!editingUser && formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match!');
       return;
     }
 
-    if (formData.password.length < 6) {
-      alert('Password must be at least 6 characters long!');
+    if (!editingUser && formData.password.length < 6) {
+      setError('Password must be at least 6 characters long!');
       return;
     }
 
-    if (editingUser) {
-      setUsers(users.map(u => 
-        u.id === editingUser.id 
-          ? { 
-              ...u, 
-              username: formData.username,
-              name: formData.name,
-              email: formData.email,
-              phone: formData.phone,
-              role: formData.role
-            }
-          : u
-      ));
-      setEditingUser(null);
-    } else {
-      const newUser: User = {
-        id: Date.now().toString(),
-        username: formData.username,
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        role: formData.role,
-        isActive: true,
-        createdAt: new Date()
-      };
-      setUsers([...users, newUser]);
+    try {
+      setError(null);
+      
+      if (editingUser) {
+        // Update existing user
+        const updateData: any = {
+          username: formData.username,
+          email: formData.email,
+          role: formData.role
+        };
+        
+        // Only include password if provided
+        if (formData.password) {
+          updateData.password = formData.password;
+        }
+        
+        const updatedUser = await userService.updateUser(parseInt(editingUser.id), updateData);
+        const appUser = convertApiUserToAppUser(updatedUser);
+        
+        setUsers(users.map(u => u.id === editingUser.id ? appUser : u));
+        setEditingUser(null);
+      } else {
+        // Create new user
+        const newUser = await userService.createUser({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role
+        });
+        
+        const appUser = convertApiUserToAppUser(newUser);
+        setUsers([...users, appUser]);
+      }
+      
+      setFormData({ 
+        username: '', 
+        email: '', 
+        role: 'salesman', 
+        password: '', 
+        confirmPassword: '' 
+      });
+      setShowAddForm(false);
+    } catch (err: any) {
+      setError(err.message || 'Operation failed. Please try again.');
+      console.error('Error in handleSubmit:', err);
     }
-    
-    setFormData({ 
-      username: '', 
-      name: '', 
-      email: '', 
-      phone: '', 
-      role: 'salesman', 
-      password: '', 
-      confirmPassword: '' 
-    });
-    setShowAddForm(false);
   };
 
   const startEdit = (user: User) => {
     setEditingUser(user);
     setFormData({
       username: user.username,
-      name: user.name,
       email: user.email || '',
-      phone: user.phone || '',
       role: user.role,
       password: '',
       confirmPassword: ''
@@ -139,16 +148,35 @@ export function Settings() {
     setShowAddForm(true);
   };
 
-  const deleteUser = (userId: string) => {
+  const deleteUser = async (userId: string) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
-      setUsers(users.filter(u => u.id !== userId));
+      try {
+        setError(null);
+        await userService.deleteUser(parseInt(userId));
+        setUsers(users.filter(u => u.id !== userId));
+      } catch (err: any) {
+        setError(err.message || 'Failed to delete user. Please try again.');
+        console.error('Error deleting user:', err);
+      }
     }
   };
 
-  const toggleUserStatus = (userId: string) => {
-    setUsers(users.map(u => 
-      u.id === userId ? { ...u, isActive: !u.isActive } : u
-    ));
+  const toggleUserStatus = async (userId: string) => {
+    try {
+      setError(null);
+      const user = users.find(u => u.id === userId);
+      if (!user) return;
+      
+      const updatedUser = await userService.updateUser(parseInt(userId), {
+        is_active: !user.isActive
+      });
+      
+      const appUser = convertApiUserToAppUser(updatedUser);
+      setUsers(users.map(u => u.id === userId ? appUser : u));
+    } catch (err: any) {
+      setError(err.message || 'Failed to update user status. Please try again.');
+      console.error('Error updating user status:', err);
+    }
   };
 
   const getRoleColor = (role: UserRole) => {
@@ -169,6 +197,22 @@ export function Settings() {
     }
   };
 
+  // Check if current user is admin
+  const isAdmin = currentUser?.role === 'admin';
+
+  if (!isAdmin) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <AlertCircle className="text-red-400 mr-2" size={20} />
+            <p className="text-red-800">Access denied. Only administrators can manage users.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -182,9 +226,7 @@ export function Settings() {
             setEditingUser(null);
             setFormData({ 
               username: '', 
-              name: '', 
               email: '', 
-              phone: '', 
               role: 'salesman', 
               password: '', 
               confirmPassword: '' 
@@ -196,6 +238,16 @@ export function Settings() {
           <span>Add User</span>
         </button>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <AlertCircle className="text-red-400 mr-2" size={20} />
+            <p className="text-red-800">{error}</p>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex gap-4 items-center">
@@ -243,35 +295,13 @@ export function Settings() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Full Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
+                  Email *
                 </label>
                 <input
                   type="email"
+                  required
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone
-                </label>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 />
               </div>
@@ -292,34 +322,32 @@ export function Settings() {
               </div>
             </div>
             
-            {!editingUser && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Password *
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={formData.password}
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Confirm Password *
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={formData.confirmPassword}
-                    onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  />
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {editingUser ? 'New Password (leave blank to keep current)' : 'Password *'}
+                </label>
+                <input
+                  type="password"
+                  required={!editingUser}
+                  value={formData.password}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                />
               </div>
-            )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {editingUser ? 'Confirm New Password' : 'Confirm Password *'}
+                </label>
+                <input
+                  type="password"
+                  required={!editingUser}
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                />
+              </div>
+            </div>
 
             <div className="flex gap-3 pt-4">
               <button
@@ -342,98 +370,99 @@ export function Settings() {
 
       {/* Users List */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contact
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Role
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                      <div className="text-sm text-gray-500">@{user.username}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {user.email && (
-                        <div className="flex items-center space-x-1">
-                          <Mail size={14} className="text-gray-400" />
-                          <span>{user.email}</span>
-                        </div>
-                      )}
-                      {user.phone && (
-                        <div className="flex items-center space-x-1 mt-1">
-                          <Phone size={14} className="text-gray-400" />
-                          <span>{user.phone}</span>
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
-                      {getRoleIcon(user.role)}
-                      <span className="ml-1 capitalize">{user.role}</span>
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => toggleUserStatus(user.id)}
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        user.isActive 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {user.isActive ? <UserCheck size={14} /> : <UserX size={14} />}
-                      <span className="ml-1">{user.isActive ? 'Active' : 'Inactive'}</span>
-                    </button>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {user.createdAt.toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => startEdit(user)}
-                        className="text-amber-600 hover:text-amber-900"
-                      >
-                        <Edit3 size={16} />
-                      </button>
-                      <button
-                        onClick={() => deleteUser(user.id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="animate-spin text-amber-600" size={32} />
+            <span className="ml-2 text-gray-600">Loading users...</span>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    User
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Role
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Created
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredUsers.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                        <div className="text-sm text-gray-500">@{user.username}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {user.email && (
+                          <div className="flex items-center space-x-1">
+                            <Mail size={14} className="text-gray-400" />
+                            <span>{user.email}</span>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
+                        {getRoleIcon(user.role)}
+                        <span className="ml-1 capitalize">{user.role}</span>
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() => toggleUserStatus(user.id)}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          user.isActive 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {user.isActive ? <UserCheck size={14} /> : <UserX size={14} />}
+                        <span className="ml-1">{user.isActive ? 'Active' : 'Inactive'}</span>
+                      </button>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {user.createdAt.toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => startEdit(user)}
+                          className="text-amber-600 hover:text-amber-900"
+                        >
+                          <Edit3 size={16} />
+                        </button>
+                        <button
+                          onClick={() => deleteUser(user.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

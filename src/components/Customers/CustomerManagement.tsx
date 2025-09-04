@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { customers as initialCustomers } from '../../data/mockData';
+import { useCustomers } from '../../contexts/CustomerContext';
 import { Customer } from '../../types';
 import { 
   Users, 
@@ -8,59 +8,66 @@ import {
   Trash2,
   Search,
   Phone,
-  Calendar
+  Calendar,
+  CreditCard,
+  Wifi,
+  Loader2
 } from 'lucide-react';
 
 export function CustomerManagement() {
-  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
+  const { customers, loading, error, addCustomer, updateCustomer, deleteCustomer: deleteCustomerAPI } = useCustomers();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
-    address: ''
+    address: '',
+    cardRefId: '',
+    rfId: ''
   });
   const [showDeleteModal, setShowDeleteModal] = useState<Customer | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.phone.includes(searchTerm) ||
-    customer.cardRefId.toLowerCase().includes(searchTerm.toLowerCase())
+    (customer.cardRefId || customer.card_number).toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (customer.rfId || customer.rfid_no)?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     
-    if (editingCustomer) {
-      setCustomers(customers.map(c => 
-        c.id === editingCustomer.id 
-          ? { 
-              ...c, 
-              name: formData.name,
-              phone: formData.phone,
-              address: formData.address
-            }
-          : c
-      ));
-      setEditingCustomer(null);
-    } else {
-      // Generate unique card reference ID
-      const cardRefId = `CARD${String(customers.length + 1).padStart(3, '0')}`;
+    try {
+      if (editingCustomer) {
+        await updateCustomer(editingCustomer.id, {
+          name: formData.name,
+          phone: formData.phone,
+          rfid_no: formData.rfId,
+          card_number: formData.cardRefId,
+          balance: editingCustomer.balance
+        });
+        setEditingCustomer(null);
+      } else {
+        await addCustomer({
+          name: formData.name,
+          phone: formData.phone,
+          rfid_no: formData.rfId,
+          card_number: formData.cardRefId,
+          balance: 0
+        });
+      }
       
-      const newCustomer: Customer = {
-        id: Date.now().toString(),
-        name: formData.name,
-        phone: formData.phone,
-        cardRefId: cardRefId,
-        balance: 0, // Default balance
-        createdAt: new Date()
-      };
-      setCustomers([...customers, newCustomer]);
+      setFormData({ name: '', phone: '', address: '', cardRefId: '', rfId: '' });
+      setShowAddForm(false);
+    } catch (error) {
+      console.error('Failed to save customer:', error);
+      // Error is handled by the context
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    setFormData({ name: '', phone: '', address: '' });
-    setShowAddForm(false);
   };
 
   const startEdit = (customer: Customer) => {
@@ -68,14 +75,21 @@ export function CustomerManagement() {
     setFormData({
       name: customer.name,
       phone: customer.phone,
-      address: customer.address || ''
+      address: customer.address || '',
+      cardRefId: customer.cardRefId || customer.card_number,
+      rfId: customer.rfId || customer.rfid_no || ''
     });
     setShowAddForm(true);
   };
 
-  const deleteCustomer = (customerId: string) => {
-    setCustomers(customers.filter(c => c.id !== customerId));
-    setShowDeleteModal(null);
+  const handleDeleteCustomer = async (customerId: number) => {
+    try {
+      await deleteCustomerAPI(customerId);
+      setShowDeleteModal(null);
+    } catch (error) {
+      console.error('Failed to delete customer:', error);
+      // Error is handled by the context
+    }
   };
 
   const confirmDelete = (customer: Customer) => {
@@ -83,6 +97,17 @@ export function CustomerManagement() {
   };
 
 
+
+  if (loading && customers.length === 0) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-amber-600" />
+          <p className="text-gray-600">Loading customers...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -95,7 +120,7 @@ export function CustomerManagement() {
           onClick={() => {
             setShowAddForm(true);
             setEditingCustomer(null);
-            setFormData({ name: '', phone: '', address: '' });
+            setFormData({ name: '', phone: '', address: '', cardRefId: '', rfId: '' });
           }}
           className="bg-amber-900 text-white px-4 py-2 rounded-lg hover:bg-amber-800 transition-colors flex items-center space-x-2"
         >
@@ -104,12 +129,18 @@ export function CustomerManagement() {
         </button>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">{error}</p>
+        </div>
+      )}
+
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
         <input
           type="text"
-          placeholder="Search customers by name, phone, or card ID..."
+          placeholder="Search customers by name, phone, card ID, or RF ID..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
@@ -123,7 +154,7 @@ export function CustomerManagement() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Card ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Card Details</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
@@ -146,14 +177,27 @@ export function CustomerManagement() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
-                      {customer.cardRefId}
-                    </span>
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <CreditCard size={14} className="text-amber-600" />
+                        <span className="px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs font-medium">
+                          {customer.cardRefId || customer.card_number}
+                        </span>
+                      </div>
+                      {(customer.rfId || customer.rfid_no) && (
+                        <div className="flex items-center space-x-2">
+                          <Wifi size={14} className="text-blue-600" />
+                          <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+                            {customer.rfId || customer.rfid_no}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div className="flex items-center">
                       <Calendar size={12} className="mr-1" />
-                      {customer.createdAt.toLocaleDateString()}
+                      {customer.createdAt ? customer.createdAt.toLocaleDateString() : new Date(customer.created_at).toLocaleDateString()}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
@@ -214,15 +258,58 @@ export function CustomerManagement() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                   placeholder="Enter customer address"
                   rows={3}
-                  required
                 />
+              </div>
+              
+              {/* Card Details Section */}
+              <div className="border-t pt-4">
+                <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                  <CreditCard size={16} className="mr-2 text-amber-600" />
+                  Card Details
+                </h3>
+                
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Card Reference ID
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.cardRefId}
+                      onChange={(e) => setFormData({ ...formData, cardRefId: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      placeholder="CARD001 or leave empty for auto-generation"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Leave empty to auto-generate: CARD001, CARD002, etc.
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      RF ID (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.rfId}
+                      onChange={(e) => setFormData({ ...formData, rfId: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      placeholder="RF123456789"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      RFID tag number for contactless payments
+                    </p>
+                  </div>
+                </div>
               </div>
               <div className="flex space-x-3 pt-4">
                 <button
                   type="submit"
-                  className="flex-1 bg-amber-900 text-white py-2 px-4 rounded-lg hover:bg-amber-800 transition-colors font-medium"
+                  disabled={isSubmitting}
+                  className="flex-1 bg-amber-900 text-white py-2 px-4 rounded-lg hover:bg-amber-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
-                  {editingCustomer ? 'Update' : 'Add'} Customer
+                  {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+                  <span>{editingCustomer ? 'Update' : 'Add'} Customer</span>
                 </button>
                 <button
                   type="button"
@@ -257,7 +344,7 @@ export function CustomerManagement() {
             
             <div className="flex space-x-3">
               <button
-                onClick={() => deleteCustomer(showDeleteModal.id)}
+                onClick={() => handleDeleteCustomer(showDeleteModal.id)}
                 className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center space-x-2"
               >
                 <Trash2 size={16} />

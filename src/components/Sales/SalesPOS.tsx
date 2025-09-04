@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { customers } from '../../data/mockData';
 import { Product, SaleItem, PaymentMethod } from '../../types';
 import { useProducts } from '../../contexts/ProductContext';
+import { useCustomers } from '../../contexts/CustomerContext';
+import { useSales } from '../../contexts/SalesContext';
 import { 
   ShoppingCart, 
   Plus, 
@@ -13,11 +14,14 @@ import {
   Clock,
   Search,
   Printer,
-  Package
+  Package,
+  Loader2
 } from 'lucide-react';
 
 export function SalesPOS() {
   const { products } = useProducts();
+  const { customers } = useCustomers();
+  const { addSale, loading } = useSales();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [cartItems, setCartItems] = useState<SaleItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,6 +33,7 @@ export function SalesPOS() {
   const [alertMessage, setAlertMessage] = useState('');
   const [alertType, setAlertType] = useState<'success' | 'error'>('success');
   const [showBillModal, setShowBillModal] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [currentSale, setCurrentSale] = useState<{
     items: SaleItem[];
     subtotal: number;
@@ -51,17 +56,18 @@ export function SalesPOS() {
   });
 
   const addToCart = (product: Product) => {
-    const existingItem = cartItems.find(item => item.productId === product.id);
+    const existingItem = cartItems.find(item => item.product_id === product.id);
     
     if (existingItem) {
       setCartItems(cartItems.map(item =>
-        item.productId === product.id
-          ? { ...item, quantity: item.quantity + 1, total: (item.quantity + 1) * item.price }
+        item.product_id === product.id
+          ? { ...item, quantity: item.quantity + 1, total: (item.quantity + 1) * (item.price || product.price) }
           : item
       ));
     } else {
       setCartItems([...cartItems, {
-        productId: product.id,
+        product_id: product.id,
+        productId: product.id.toString(),
         productName: product.name,
         quantity: 1,
         price: product.price,
@@ -72,18 +78,18 @@ export function SalesPOS() {
 
   const updateQuantity = (productId: string, change: number) => {
     setCartItems(cartItems.map(item => {
-      if (item.productId === productId) {
+      if (item.productId === productId || item.product_id === parseInt(productId)) {
         const newQuantity = Math.max(0, item.quantity + change);
         return newQuantity === 0 
           ? null 
-          : { ...item, quantity: newQuantity, total: newQuantity * item.price };
+          : { ...item, quantity: newQuantity, total: newQuantity * (item.price || 0) };
       }
       return item;
     }).filter(Boolean) as SaleItem[]);
   };
 
   const removeFromCart = (productId: string) => {
-    setCartItems(cartItems.filter(item => item.productId !== productId));
+    setCartItems(cartItems.filter(item => item.productId !== productId && item.product_id !== parseInt(productId)));
   };
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.total, 0);
@@ -97,7 +103,7 @@ export function SalesPOS() {
     setShowAlertModal(true);
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cartItems.length === 0) return;
     
     // validation of  cash payment
@@ -106,29 +112,51 @@ export function SalesPOS() {
       return;
     }
     
-    // Generate invoice
-    const invoiceNumber = `INV-${Date.now()}`;
+    setIsProcessing(true);
     
-    // Create sale data
-    const saleData = {
-      items: cartItems,
-      subtotal,
-      total,
-      paymentMethod,
-      customerId: selectedCustomer,
-      invoiceNumber,
-      paidAmount: paymentMethod === 'cash' ? paid : total,
-      change: paymentMethod === 'cash' ? change : 0,
-      roomNumber: paymentMethod === 'pending' ? roomNumber : null,
-      createdAt: new Date()
-    };
-    
-    // Here you would normally save to database
-    console.log('Processing sale:', saleData);
-    
-    // Set current sale and show bill
-    setCurrentSale(saleData);
-    setShowBillModal(true);
+    try {
+      // Generate invoice
+      const invoiceNumber = `INV-${Date.now()}`;
+      
+      // Create sale data for API
+      const saleData = {
+        customer_id: selectedCustomer ? parseInt(selectedCustomer) : 0,
+        room_no: roomNumber || '',
+        payment_method: paymentMethod,
+        items: cartItems.map(item => ({
+          product_id: item.product_id,
+          quantity: item.quantity
+        }))
+      };
+      
+      // Create sale via API
+      await addSale(saleData);
+      
+      // Create local sale data for display
+      const localSaleData = {
+        items: cartItems,
+        subtotal,
+        total,
+        paymentMethod,
+        customerId: selectedCustomer,
+        invoiceNumber,
+        paidAmount: paymentMethod === 'cash' ? paid : total,
+        change: paymentMethod === 'cash' ? change : 0,
+        roomNumber: paymentMethod === 'pending' ? roomNumber : null,
+        createdAt: new Date()
+      };
+      
+      // Set current sale and show bill
+      setCurrentSale(localSaleData);
+      setShowBillModal(true);
+      
+      showAlert('Sale processed successfully!', 'success');
+    } catch (error) {
+      console.error('Failed to process sale:', error);
+      showAlert('Failed to process sale. Please try again.', 'error');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handlePrintBill = () => {
@@ -299,7 +327,7 @@ export function SalesPOS() {
               <option value="">Walk-in Customer</option>
               {customers.map((customer) => (
                 <option key={customer.id} value={customer.id}>
-                  {customer.name} ({customer.cardRefId})
+                  {customer.name} ({customer.cardRefId || customer.card_number})
                 </option>
               ))}
             </select>
@@ -397,9 +425,11 @@ export function SalesPOS() {
             <div className="grid grid-cols-2 gap-3 mt-6">
               <button
                 onClick={handleCheckout}
-                className="bg-amber-900 text-white px-4 py-3 rounded-lg hover:bg-amber-800 transition-colors font-medium"
+                disabled={isProcessing}
+                className="bg-amber-900 text-white px-4 py-3 rounded-lg hover:bg-amber-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
-                Process Sale
+                {isProcessing && <Loader2 size={16} className="animate-spin" />}
+                <span>{isProcessing ? 'Processing...' : 'Process Sale'}</span>
               </button>
               <button className="border border-gray-300 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors font-medium flex items-center justify-center space-x-2">
                 <Printer size={16} />

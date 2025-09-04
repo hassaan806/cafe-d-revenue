@@ -1,28 +1,121 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { useSales } from '../../contexts/SalesContext';
+import { useCustomers } from '../../contexts/CustomerContext';
+import { useProducts } from '../../contexts/ProductContext';
+import { dashboardService } from '../../services/dashboardService';
 import { 
   TrendingUp, 
   Users, 
   Package, 
   CreditCard,
   ShoppingCart,
-  DollarSign
+  DollarSign,
+  Loader2,
+  Calendar,
+  RefreshCw,
+  BarChart3,
+  PieChart
 } from 'lucide-react';
-import { sales, customers, products } from '../../data/mockData';
 
-export function Dashboard() {
+interface DashboardProps {
+  onViewChange: (view: string) => void;
+}
+
+export function Dashboard({ onViewChange }: DashboardProps) {
   const { user } = useAuth();
+  const { sales, loading: salesLoading } = useSales();
+  const { customers, loading: customersLoading } = useCustomers();
+  const { products, loading: productsLoading } = useProducts();
   
-  const totalSales = sales.reduce((sum, sale) => sum + sale.total, 0);
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [trendsData, setTrendsData] = useState<any>(null);
+  const [customerInsights, setCustomerInsights] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState('today');
+  const [customDateRange, setCustomDateRange] = useState({
+    fromDate: '',
+    toDate: ''
+  });
+  
+  // Calculate local stats as fallback
+  const totalSales = sales.reduce((sum, sale) => sum + (sale.total || sale.total_price), 0);
   const todaySales = sales.filter(sale => {
     const today = new Date();
-    const saleDate = new Date(sale.createdAt);
+    const saleDate = new Date(sale.timestamp || sale.createdAt);
     return saleDate.toDateString() === today.toDateString();
   });
-  const todayRevenue = todaySales.reduce((sum, sale) => sum + sale.total, 0);
+  const todayRevenue = todaySales.reduce((sum, sale) => sum + (sale.total || sale.total_price), 0);
   
   const lowStockProducts = products.filter(p => p.stock < 20);
   const totalCustomerBalance = customers.reduce((sum, customer) => sum + customer.balance, 0);
+
+  // Helper function to get date range
+  const getDateRange = () => {
+    const today = new Date();
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    switch (dateRange) {
+      case 'today':
+        return {
+          fromDate: today.toISOString().split('T')[0],
+          toDate: today.toISOString().split('T')[0]
+        };
+      case 'week':
+        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        return {
+          fromDate: weekAgo.toISOString().split('T')[0],
+          toDate: today.toISOString().split('T')[0]
+        };
+      case 'month':
+        return {
+          fromDate: startOfMonth.toISOString().split('T')[0],
+          toDate: today.toISOString().split('T')[0]
+        };
+      case 'custom':
+        return {
+          fromDate: customDateRange.fromDate,
+          toDate: customDateRange.toDate
+        };
+      default:
+        return {
+          fromDate: startOfMonth.toISOString().split('T')[0],
+          toDate: today.toISOString().split('T')[0]
+        };
+    }
+  };
+
+  // Fetch dashboard data from API
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const { fromDate, toDate } = getDateRange();
+      
+      // Fetch all dashboard data in parallel
+      const [overview, trends, insights] = await Promise.all([
+        dashboardService.getOverview(fromDate, toDate),
+        dashboardService.getSalesTrends(30),
+        dashboardService.getCustomerInsights(5)
+      ]);
+      
+      setDashboardData(overview);
+      setTrendsData(trends);
+      setCustomerInsights(insights);
+    } catch (error: any) {
+      console.error('Failed to fetch dashboard data:', error);
+      setError(error.message || 'Failed to fetch dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load dashboard data on mount and when date range changes
+  useEffect(() => {
+    fetchDashboardData();
+  }, [dateRange, customDateRange.fromDate, customDateRange.toDate]);
 
   const stats = [
     {
@@ -60,12 +153,64 @@ export function Dashboard() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">Welcome back, {user?.name}</p>
+          <p className="text-gray-600">Welcome back, {user?.name || user?.username}</p>
         </div>
-        <div className="bg-amber-900 text-white px-4 py-2 rounded-lg">
-          <span className="text-sm font-medium capitalize">{user?.role}</span>
+        <div className="flex items-center space-x-3">
+          <select
+            value={dateRange}
+            onChange={(e) => setDateRange(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+          >
+            <option value="today">Today</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+            <option value="custom">Custom Range</option>
+          </select>
+          <button
+            onClick={fetchDashboardData}
+            disabled={loading}
+            className="bg-amber-900 text-white px-4 py-2 rounded-lg hover:bg-amber-800 transition-colors disabled:opacity-50 flex items-center space-x-2"
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <span>Refresh</span>
+          </button>
+          <div className="bg-amber-900 text-white px-4 py-2 rounded-lg">
+            <span className="text-sm font-medium capitalize">{user?.role}</span>
+          </div>
         </div>
       </div>
+
+      {/* Custom Date Range Input */}
+      {dateRange === 'custom' && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center space-x-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+              <input
+                type="date"
+                value={customDateRange.fromDate}
+                onChange={(e) => setCustomDateRange(prev => ({ ...prev, fromDate: e.target.value }))}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+              <input
+                type="date"
+                value={customDateRange.toDate}
+                onChange={(e) => setCustomDateRange(prev => ({ ...prev, toDate: e.target.value }))}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">{error}</p>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -90,21 +235,33 @@ export function Dashboard() {
         <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
           <div className="grid grid-cols-2 gap-3">
-            <button className="flex items-center space-x-2 bg-amber-900 text-white px-4 py-3 rounded-lg hover:bg-amber-800 transition-colors">
+            <button 
+              onClick={() => onViewChange('sales')}
+              className="flex items-center space-x-2 bg-amber-900 text-white px-4 py-3 rounded-lg hover:bg-amber-800 transition-colors"
+            >
               <ShoppingCart size={16} />
               <span className="text-sm">New Sale</span>
             </button>
             {user?.role !== 'salesman' && (
               <>
-                <button className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                <button 
+                  onClick={() => onViewChange('products')}
+                  className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                >
                   <Package size={16} />
                   <span className="text-sm">Add Product</span>
                 </button>
-                <button className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 transition-colors">
+                <button 
+                  onClick={() => onViewChange('customers')}
+                  className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 transition-colors"
+                >
                   <Users size={16} />
                   <span className="text-sm">Add Customer</span>
                 </button>
-                <button className="flex items-center space-x-2 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors">
+                <button 
+                  onClick={() => onViewChange('cards')}
+                  className="flex items-center space-x-2 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors"
+                >
                   <CreditCard size={16} />
                   <span className="text-sm">Recharge Card</span>
                 </button>
@@ -173,6 +330,63 @@ export function Dashboard() {
           </table>
         </div>
       </div>
+
+      {/* API Dashboard Data */}
+      {dashboardData && (
+        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <BarChart3 className="w-5 h-5 mr-2" />
+            Dashboard Overview (API Data)
+          </h3>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <pre className="text-sm text-gray-700 whitespace-pre-wrap overflow-x-auto">
+              {dashboardData}
+            </pre>
+          </div>
+        </div>
+      )}
+
+      {/* Sales Trends */}
+      {trendsData && (
+        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <TrendingUp className="w-5 h-5 mr-2" />
+            Sales Trends (Last 30 Days)
+          </h3>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <pre className="text-sm text-gray-700 whitespace-pre-wrap overflow-x-auto">
+              {trendsData}
+            </pre>
+          </div>
+        </div>
+      )}
+
+      {/* Customer Insights */}
+      {customerInsights && (
+        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <Users className="w-5 h-5 mr-2" />
+            Customer Insights (Top 5)
+          </h3>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <pre className="text-sm text-gray-700 whitespace-pre-wrap overflow-x-auto">
+              {customerInsights}
+            </pre>
+          </div>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+          <div className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-amber-600" />
+              <p className="text-gray-600">Loading dashboard data...</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

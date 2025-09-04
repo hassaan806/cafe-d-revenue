@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { X, DollarSign, CreditCard, User } from 'lucide-react';
+import { X, DollarSign, CreditCard, User, Loader2 } from 'lucide-react';
 import { Customer } from '../../types';
+import { useRecharges } from '../../contexts/RechargeContext';
+import { useCustomers } from '../../contexts/CustomerContext';
 
 interface RechargeFormProps {
   isOpen: boolean;
@@ -10,18 +12,40 @@ interface RechargeFormProps {
 }
 
 export function RechargeForm({ isOpen, onClose, onRecharge, customer }: RechargeFormProps) {
+  const { addRecharge, loading } = useRecharges();
+  const { updateCustomer } = useCustomers();
   const [amount, setAmount] = useState<number>(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (validateAmount()) {
-      if (customer) {
-        onRecharge(customer.id, amount);
+    if (validateAmount() && customer) {
+      setIsSubmitting(true);
+      try {
+        // Create recharge record
+        await addRecharge({
+          amount: amount,
+          customer_id: customer.id
+        });
+
+        // Update customer balance
+        await updateCustomer(customer.id, {
+          balance: customer.balance + amount
+        });
+
+        // Call the original onRecharge callback for local state updates
+        onRecharge(customer.id.toString(), amount);
+        
         setAmount(0);
         setErrors({});
         onClose();
+      } catch (error) {
+        console.error('Failed to recharge:', error);
+        // Error is handled by the context
+      } finally {
+        setIsSubmitting(false);
       }
     }
   };
@@ -163,11 +187,12 @@ export function RechargeForm({ isOpen, onClose, onRecharge, customer }: Recharge
              <button
                type="button"
                onClick={handleSubmit}
-               disabled={amount <= 0}
+               disabled={amount <= 0 || isSubmitting}
                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
              >
+               {isSubmitting && <Loader2 size={16} className="animate-spin" />}
                <DollarSign size={16} />
-               <span>Recharge PKR {amount.toLocaleString()}</span>
+               <span>{isSubmitting ? 'Processing...' : `Recharge PKR ${amount.toLocaleString()}`}</span>
              </button>
            </div>
          </div>

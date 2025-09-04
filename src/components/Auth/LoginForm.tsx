@@ -9,15 +9,33 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
 
+  // Test API connection on component mount
+  React.useEffect(() => {
+    const testConnection = async () => {
+      try {
+        const { testApiConnection } = await import('../../services/authService');
+        await testApiConnection();
+      } catch (error) {
+        console.error('Failed to test API connection:', error);
+      }
+    };
+    testConnection();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Login form submitted with:', username);
     setIsLoading(true);
     setError('');
 
-    const success = await login(username, password);
+    const result = await login(username, password);
+    console.log('Login result:', result);
     
-    if (!success) {
-      setError('Invalid username or password');
+    if (!result.success) {
+      console.log('Login failed, setting error:', result.error);
+      setError(result.error || 'Invalid username or password');
+    } else {
+      console.log('Login successful, should redirect to dashboard');
     }
     
     setIsLoading(false);
@@ -79,14 +97,7 @@ export function LoginForm() {
           </button>
         </form>
 
-        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-          <p className="text-xs text-gray-600 mb-2 font-semibold">Demo Accounts:</p>
-          <div className="text-xs text-gray-500 space-y-1">
-            <div>Admin: admin / admin123</div>
-            <div>Manager: manager / manager123</div>
-            <div>Sales: sales / sales123</div>
-          </div>
-        </div>
+
       </div>
     </div>
   );

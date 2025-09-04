@@ -14,40 +14,22 @@ export function NewCardForm({ isOpen, onClose, onSave, existingCustomers }: NewC
     name: '',
     phone: '',
     cardRefId: '',
-    rfId: '',
-    balance: 0
+    rfId: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Generate next card ID when component mounts or when existing customers change
+  // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
-      const nextCardId = generateNextCardId();
-      setFormData(prev => ({ 
-        ...prev, 
-        cardRefId: nextCardId,
-        balance: 0 // Ensure balance is always 0 for new cards
-      }));
+      setFormData({
+        name: '',
+        phone: '',
+        cardRefId: '',
+        rfId: ''
+      });
+      setErrors({});
     }
-  }, [isOpen, existingCustomers]);
-
-  const generateNextCardId = (): string => {
-    const existingCardIds = existingCustomers.map(c => c.cardRefId);
-    let nextNumber = 1;
-    
-    // Find the highest number in existing card IDs
-    existingCardIds.forEach(cardId => {
-      const match = cardId.match(/CARD(\d+)/);
-      if (match) {
-        const num = parseInt(match[1]);
-        if (num >= nextNumber) {
-          nextNumber = num + 1;
-        }
-      }
-    });
-    
-    return `CARD${nextNumber.toString().padStart(3, '0')}`;
-  };
+  }, [isOpen]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -64,20 +46,12 @@ export function NewCardForm({ isOpen, onClose, onSave, existingCustomers }: NewC
 
     if (!formData.cardRefId.trim()) {
       newErrors.cardRefId = 'Card ID is required';
-    } else if (!/^CARD\d{3}$/.test(formData.cardRefId)) {
-      newErrors.cardRefId = 'Card ID must be in format CARDXXX';
     } else if (existingCustomers.some(c => c.cardRefId === formData.cardRefId)) {
       newErrors.cardRefId = 'This Card ID already exists';
     }
 
-    if (!formData.rfId.trim()) {
-      newErrors.rfId = 'RF ID is required';
-    } else if (existingCustomers.some(c => (c as any).rfId === formData.rfId)) {
+    if (formData.rfId.trim() && existingCustomers.some(c => (c as any).rfId === formData.rfId)) {
       newErrors.rfId = 'This RF ID already exists';
-    }
-
-    if (formData.balance < 0) {
-      newErrors.balance = 'Balance cannot be negative';
     }
 
     setErrors(newErrors);
@@ -92,9 +66,9 @@ export function NewCardForm({ isOpen, onClose, onSave, existingCustomers }: NewC
         name: formData.name.trim(),
         phone: formData.phone.trim(),
         cardRefId: formData.cardRefId.trim(),
-        balance: formData.balance,
-        // Add RF ID to the customer data (we'll need to update the Customer type)
-        ...(formData.rfId && { rfId: formData.rfId.trim() })
+        balance: 0, // Always 0 for new cards
+        // Add RF ID to the customer data if provided
+        ...(formData.rfId.trim() && { rfId: formData.rfId.trim() })
       } as any);
       
       // Reset form
@@ -102,8 +76,7 @@ export function NewCardForm({ isOpen, onClose, onSave, existingCustomers }: NewC
         name: '',
         phone: '',
         cardRefId: '',
-        rfId: '',
-        balance: 0
+        rfId: ''
       });
       setErrors({});
       onClose();
@@ -124,11 +97,11 @@ export function NewCardForm({ isOpen, onClose, onSave, existingCustomers }: NewC
     return `+${digits.slice(0, 2)}-${digits.slice(2, 5)}-${digits.slice(5, 12)}`;
   };
 
-  const handleInputChange = (field: string, value: string | number) => {
+  const handleInputChange = (field: string, value: string) => {
     let processedValue = value;
     
     // Auto-format phone number
-    if (field === 'phone' && typeof value === 'string') {
+    if (field === 'phone') {
       processedValue = formatPhoneNumber(value);
     }
     
@@ -205,16 +178,16 @@ export function NewCardForm({ isOpen, onClose, onSave, existingCustomers }: NewC
               className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent ${
                 errors.cardRefId ? 'border-red-500' : 'border-gray-300'
               }`}
-              placeholder="CARD001"
-                         />
-             {errors.cardRefId && <p className="text-red-500 text-sm mt-1">{errors.cardRefId}</p>}
-           </div>
+              placeholder="Enter your preferred card ID (e.g., CARD001)"
+            />
+            {errors.cardRefId && <p className="text-red-500 text-sm mt-1">{errors.cardRefId}</p>}
+          </div>
 
           {/* RF ID Field */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <Wifi className="inline w-4 h-4 mr-2" />
-              RF ID
+              RF ID (Optional)
             </label>
             <input
               type="text"
@@ -223,30 +196,11 @@ export function NewCardForm({ isOpen, onClose, onSave, existingCustomers }: NewC
               className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent ${
                 errors.rfId ? 'border-red-500' : 'border-gray-300'
               }`}
-              placeholder="Enter RF ID"
+              placeholder="Enter RF ID (optional)"
             />
             {errors.rfId && <p className="text-red-500 text-sm mt-1">{errors.rfId}</p>}
           </div>
 
-                     {/* Initial Balance Field */}
-           <div>
-             <label className="block text-sm font-medium text-gray-700 mb-2">
-               Initial Balance (PKR)
-             </label>
-             <input
-               type="number"
-               min="0"
-               step="1"
-               value={formData.balance}
-               onChange={(e) => handleInputChange('balance', parseFloat(e.target.value) || 0)}
-               className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent ${
-                 errors.balance ? 'border-red-500' : 'border-gray-300'
-               }`}
-               placeholder="0"
-             />
-             {errors.balance && <p className="text-red-500 text-sm mt-1">{errors.balance}</p>}
-             <p className="text-xs text-gray-500 mt-1">New cards start with 0 balance. Customer can recharge later.</p>
-           </div>
 
           {/* Form Actions */}
           <div className="flex space-x-3 pt-4">

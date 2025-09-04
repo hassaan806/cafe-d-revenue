@@ -1,72 +1,97 @@
 export type UserRole = 'admin' | 'manager' | 'salesman';
 
 export interface User {
-  id: string;
+  id: number;
   username: string;
   role: UserRole;
-  name: string;
-  email?: string;
+  name?: string; // Optional since API doesn't return name
+  email: string;
   phone?: string;
-  isActive: boolean;
-  createdAt: Date;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Product {
-  id: string;
+  id: number;
   name: string;
-  category: string;
+  description: string;
   price: number;
   stock: number;
-  description?: string;
-  image?: string;
+  image_url: string;
+  category_id: number;
+  created_at: string;
+  updated_at: string;
+  // Legacy fields for backward compatibility
+  category?: string;
   imageUrl?: string;
 }
 
 export interface Category {
-  id: string;
+  id: number;
   name: string;
+  created_at: string;
+  updated_at: string;
+  // Legacy fields for backward compatibility
   description?: string;
 }
 
 export interface RechargeTransaction {
-  id: string;
-  customerId: string;
+  id: number;
+  customer_id: number;
   amount: number;
-  previousBalance: number;
-  newBalance: number;
-  timestamp: Date;
+  recharge_date: string;
+  // Legacy fields for backward compatibility
+  customerId?: string;
+  previousBalance?: number;
+  newBalance?: number;
+  timestamp?: Date;
 }
 
 export interface Customer {
-  id: string;
+  id: number;
   name: string;
   phone: string;
-  address?: string;
-  cardRefId: string;
-  rfId?: string;
+  rfid_no: string;
+  card_number: string;
   balance: number;
-  createdAt: Date;
+  created_at: string;
+  updated_at: string;
+  // Legacy fields for backward compatibility
+  address?: string;
+  cardRefId?: string;
+  rfId?: string;
+  createdAt?: Date;
 }
 
 export interface SaleItem {
-  productId: string;
-  productName: string;
+  product_id: number;
   quantity: number;
-  price: number;
-  total: number;
+  // Legacy fields for backward compatibility
+  productId?: string;
+  productName?: string;
+  price?: number;
+  total?: number;
 }
 
 export interface Sale {
-  id: string;
+  id: number;
+  total_price: number;
+  payment_method: 'cash' | 'card' | 'easypaisa' | 'pending';
+  is_settled: boolean;
+  timestamp: string;
+  room_no: string;
+  customer_id: number;
   items: SaleItem[];
-  subtotal: number;
-  tax: number;
-  total: number;
-  paymentMethod: 'card' | 'cash' | 'easypaisa' | 'pending';
+  payments: any[];
+  // Legacy fields for backward compatibility
+  subtotal?: number;
+  tax?: number;
+  total?: number;
   customerId?: string;
-  salesmanId: string;
-  createdAt: Date;
-  invoiceNumber: string;
+  salesmanId?: string;
+  createdAt?: Date;
+  invoiceNumber?: string;
 }
 
 export type PaymentMethod = 'card' | 'cash' | 'easypaisa' | 'pending';

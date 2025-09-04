@@ -1,6 +1,6 @@
-import React from 'react';
-import { X, DollarSign, CreditCard, Calendar, Clock } from 'lucide-react';
+import { X, DollarSign, CreditCard, Calendar, Clock, Loader2 } from 'lucide-react';
 import { Customer, RechargeTransaction } from '../../types';
+import { useRecharges } from '../../contexts/RechargeContext';
 
 interface RechargeHistoryProps {
   isOpen: boolean;
@@ -10,20 +10,27 @@ interface RechargeHistoryProps {
 }
 
 export function RechargeHistory({ isOpen, onClose, customer, transactions }: RechargeHistoryProps) {
+  const { getRechargesByCustomer, loading } = useRecharges();
+  
   if (!isOpen || !customer) return null;
 
-  const customerTransactions = transactions.filter(t => t.customerId === customer.id);
+  // Use API data if available, otherwise fall back to local transactions
+  const customerTransactions = getRechargesByCustomer(customer.id).length > 0 
+    ? getRechargesByCustomer(customer.id)
+    : transactions.filter(t => t.customerId === customer.id.toString());
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
+  const formatDate = (date: Date | string) => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return dateObj.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     });
   };
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', {
+  const formatTime = (date: Date | string) => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return dateObj.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true
@@ -52,7 +59,7 @@ export function RechargeHistory({ isOpen, onClose, customer, transactions }: Rec
               </div>
               <div>
                 <p className="font-semibold text-gray-900">{customer.name}</p>
-                <p className="text-sm text-gray-600">{customer.cardRefId}</p>
+                <p className="text-sm text-gray-600">{customer.cardRefId || customer.card_number}</p>
                 <p className="text-sm text-gray-600">Current Balance: PKR {customer.balance.toLocaleString()}</p>
               </div>
             </div>
@@ -62,7 +69,12 @@ export function RechargeHistory({ isOpen, onClose, customer, transactions }: Rec
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Recharge Transactions</h3>
             
-            {customerTransactions.length === 0 ? (
+            {loading ? (
+              <div className="text-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3 text-amber-600" />
+                <p className="text-gray-500">Loading recharge history...</p>
+              </div>
+            ) : customerTransactions.length === 0 ? (
               <div className="text-center py-8">
                 <DollarSign className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500">No recharge transactions found</p>
@@ -71,7 +83,11 @@ export function RechargeHistory({ isOpen, onClose, customer, transactions }: Rec
             ) : (
               <div className="space-y-3">
                 {customerTransactions
-                  .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+                  .sort((a, b) => {
+                    const dateA = a.timestamp || new Date(a.recharge_date);
+                    const dateB = b.timestamp || new Date(b.recharge_date);
+                    return dateB.getTime() - dateA.getTime();
+                  })
                   .map((transaction) => (
                     <div
                       key={transaction.id}
@@ -89,20 +105,26 @@ export function RechargeHistory({ isOpen, onClose, customer, transactions }: Rec
                             <div className="flex items-center space-x-4 text-sm text-gray-600">
                               <div className="flex items-center space-x-1">
                                 <Calendar className="w-4 h-4" />
-                                <span>{formatDate(transaction.timestamp)}</span>
+                                <span>{formatDate(transaction.timestamp || transaction.recharge_date)}</span>
                               </div>
                               <div className="flex items-center space-x-1">
                                 <Clock className="w-4 h-4" />
-                                <span>{formatTime(transaction.timestamp)}</span>
+                                <span>{formatTime(transaction.timestamp || transaction.recharge_date)}</span>
                               </div>
                             </div>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm text-gray-600">Previous: PKR {transaction.previousBalance.toLocaleString()}</p>
-                          <p className="text-sm font-medium text-green-600">
-                            New: PKR {transaction.newBalance.toLocaleString()}
-                          </p>
+                          {transaction.previousBalance && transaction.newBalance ? (
+                            <>
+                              <p className="text-sm text-gray-600">Previous: PKR {transaction.previousBalance.toLocaleString()}</p>
+                              <p className="text-sm font-medium text-green-600">
+                                New: PKR {transaction.newBalance.toLocaleString()}
+                              </p>
+                            </>
+                          ) : (
+                            <p className="text-sm text-gray-600">Recharge Amount</p>
+                          )}
                         </div>
                       </div>
                     </div>
