@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useSales } from '../../contexts/SalesContext';
 import { useCustomers } from '../../contexts/CustomerContext';
@@ -12,10 +12,8 @@ import {
   ShoppingCart,
   DollarSign,
   Loader2,
-  Calendar,
   RefreshCw,
-  BarChart3,
-  PieChart
+  BarChart3
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -24,9 +22,9 @@ interface DashboardProps {
 
 export function Dashboard({ onViewChange }: DashboardProps) {
   const { user } = useAuth();
-  const { sales, loading: salesLoading } = useSales();
-  const { customers, loading: customersLoading } = useCustomers();
-  const { products, loading: productsLoading } = useProducts();
+  const { sales } = useSales();
+  const { customers } = useCustomers();
+  const { products } = useProducts();
   
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [trendsData, setTrendsData] = useState<any>(null);
@@ -43,7 +41,7 @@ export function Dashboard({ onViewChange }: DashboardProps) {
   const totalSales = sales.reduce((sum, sale) => sum + (sale.total || sale.total_price), 0);
   const todaySales = sales.filter(sale => {
     const today = new Date();
-    const saleDate = new Date(sale.timestamp || sale.createdAt);
+    const saleDate = new Date(sale.timestamp || sale.createdAt || new Date());
     return saleDate.toDateString() === today.toDateString();
   });
   const todayRevenue = todaySales.reduce((sum, sale) => sum + (sale.total || sale.total_price), 0);
@@ -312,17 +310,17 @@ export function Dashboard({ onViewChange }: DashboardProps) {
                   <td className="py-3 text-gray-600">{sale.items.length} items</td>
                   <td className="py-3">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      sale.paymentMethod === 'cash' ? 'bg-green-100 text-green-800' :
-                      sale.paymentMethod === 'card' ? 'bg-blue-100 text-blue-800' :
-                      sale.paymentMethod === 'easypaisa' ? 'bg-purple-100 text-purple-800' :
+                      sale.payment_method === 'cash' ? 'bg-green-100 text-green-800' :
+                      sale.payment_method === 'card' ? 'bg-blue-100 text-blue-800' :
+                      sale.payment_method === 'easypaisa' ? 'bg-purple-100 text-purple-800' :
                       'bg-orange-100 text-orange-800'
                     }`}>
-                      {sale.paymentMethod.toUpperCase()}
+                      {sale.payment_method.toUpperCase()}
                     </span>
                   </td>
-                  <td className="py-3 font-semibold">PKR {sale.total}</td>
+                  <td className="py-3 font-semibold">PKR {sale.total || sale.total_price}</td>
                   <td className="py-3 text-gray-500">
-                    {new Date(sale.createdAt).toLocaleTimeString()}
+                    {new Date(sale.createdAt || sale.timestamp || new Date()).toLocaleTimeString()}
                   </td>
                 </tr>
               ))}

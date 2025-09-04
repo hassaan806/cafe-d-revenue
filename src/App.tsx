@@ -14,6 +14,7 @@ import { CustomerManagement } from './components/Customers/CustomerManagement';
 import { CardManagement } from './components/Cards/CardManagement';
 import { Reports } from './components/Reports/Reports';
 import { Settings } from './components/Settings/Settings';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function AppContent() {
   const { isAuthenticated, loading, user } = useAuth();
@@ -76,19 +77,21 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <ProductProvider>
-        <CategoryProvider>
-          <CustomerProvider>
-            <RechargeProvider>
-              <SalesProvider>
-                <AppContent />
-              </SalesProvider>
-            </RechargeProvider>
-          </CustomerProvider>
-        </CategoryProvider>
-      </ProductProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <ProductProvider>
+          <CategoryProvider>
+            <CustomerProvider>
+              <RechargeProvider>
+                <SalesProvider>
+                  <AppContent />
+                </SalesProvider>
+              </RechargeProvider>
+            </CustomerProvider>
+          </CategoryProvider>
+        </ProductProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

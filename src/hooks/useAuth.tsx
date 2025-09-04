@@ -36,19 +36,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-      
+        console.log('Initializing auth...');
         if (authService.isAuthenticated()) {
+          console.log('User is authenticated, getting stored user...');
           const storedUser = authService.getStoredUser();
           if (storedUser) {
-     
+            console.log('Found stored user:', storedUser.username);
             const appUser = convertApiUserToAppUser(storedUser);
             setUser(appUser);
+          } else {
+            console.log('No stored user found');
           }
+        } else {
+          console.log('User is not authenticated');
         }
       } catch (error) {
+        console.error('Error during auth initialization:', error);
         // Clear storage on error
         authService.logout();
       } finally {
+        console.log('Auth initialization complete, setting loading to false');
         setLoading(false);
       }
     };

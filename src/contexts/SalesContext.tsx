@@ -40,14 +40,14 @@ export const SalesProvider: React.FC<SalesProviderProps> = ({ children }) => {
       total: apiSale.total_price,
       subtotal: apiSale.total_price, // Assuming no tax for now
       tax: 0,
-      customerId: apiSale.customer_id.toString(),
+      customerId: apiSale.customer_id?.toString() || '0',
       salesmanId: '1', // Default salesman ID
       createdAt: new Date(apiSale.timestamp),
-      invoiceNumber: `INV-${apiSale.id.toString().padStart(6, '0')}`,
-      // Convert items to legacy format
-      items: apiSale.items.map((item: any) => ({
+      invoiceNumber: `INV-${apiSale.id?.toString().padStart(6, '0') || '000000'}`,
+      // Convert items to legacy format - handle undefined/null items
+      items: (apiSale.items || []).map((item: any) => ({
         ...item,
-        productId: item.product_id.toString(),
+        productId: item.product_id?.toString() || '0',
         productName: '', // Will be populated from product data
         price: 0, // Will be calculated from product data
         total: 0 // Will be calculated
@@ -61,12 +61,35 @@ export const SalesProvider: React.FC<SalesProviderProps> = ({ children }) => {
       customer_id: appSale.customer_id || parseInt(appSale.customerId || '0'),
       room_no: appSale.room_no || '',
       payment_method: appSale.payment_method || appSale.paymentMethod || 'pending',
-      items: appSale.items.map((item: any) => ({
+      items: (appSale.items || []).map((item: any) => ({
         product_id: item.product_id || parseInt(item.productId || '0'),
-        quantity: item.quantity
+        quantity: item.quantity || 0
       }))
     };
   };
+
+  // Initialize sales data on mount
+  useEffect(() => {
+    const initializeSales = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        console.log('SalesContext: Initializing sales data...');
+        const apiSales = await salesService.getSales();
+        const appSales = apiSales.map(convertApiSaleToAppSale);
+        setSales(appSales);
+        console.log('SalesContext: Successfully loaded', appSales.length, 'sales');
+      } catch (err: any) {
+        console.warn('SalesContext: API not available, using empty data:', err.message);
+        setError(err.message || 'Failed to fetch sales');
+        setSales([]); // Use empty array as fallback
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeSales();
+  }, []);
 
   const refreshSales = async () => {
     try {

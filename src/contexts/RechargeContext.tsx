@@ -36,8 +36,8 @@ export const RechargeProvider: React.FC<RechargeProviderProps> = ({ children }) 
     return {
       ...apiRecharge,
       // Map API fields to legacy fields for backward compatibility
-      customerId: apiRecharge.customer_id.toString(),
-      timestamp: new Date(apiRecharge.recharge_date),
+      customerId: apiRecharge.customer_id?.toString() || '0',
+      timestamp: apiRecharge.recharge_date ? new Date(apiRecharge.recharge_date) : new Date(),
       previousBalance: 0, // Not provided by API
       newBalance: 0 // Not provided by API
     };

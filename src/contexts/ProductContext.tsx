@@ -41,12 +41,15 @@ export function ProductProvider({ children }: { children: ReactNode }) {
       try {
         setLoading(true);
         setError(null);
+        console.log('ProductContext: Fetching products from API...');
         const apiProducts = await productService.getProducts();
         const appProducts = apiProducts.map(convertApiProductToAppProduct);
         setProducts(appProducts);
+        console.log('ProductContext: Successfully loaded', appProducts.length, 'products');
       } catch (err: any) {
+        console.warn('ProductContext: API not available, using empty data:', err.message);
         setError(err.message || 'Failed to fetch products');
-        console.error('Error fetching products:', err);
+        setProducts([]); // Use empty array as fallback
       } finally {
         setLoading(false);
       }

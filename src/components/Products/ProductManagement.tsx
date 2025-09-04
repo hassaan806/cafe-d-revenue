@@ -312,12 +312,15 @@ export function ProductManagement() {
 
       {/* Add/Edit Product Modal */}
       {showAddForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {editingProduct ? 'Edit Product' : 'Add New Product'}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] flex flex-col">
+            <div className="flex-shrink-0 p-6 pb-4 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">
+                {editingProduct ? 'Edit Product' : 'Add New Product'}
+              </h2>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                 <input
@@ -398,9 +401,13 @@ export function ProductManagement() {
                 />
                 </div>
               </div>
-              <div className="flex space-x-3 pt-4">
+              </form>
+            </div>
+            <div className="flex-shrink-0 p-6 pt-4 border-t border-gray-200">
+              <div className="flex space-x-3">
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleSubmit}
                   disabled={isSubmitting}
                   className="flex-1 bg-amber-900 text-white py-2 px-4 rounded-lg hover:bg-amber-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
@@ -424,28 +431,31 @@ export function ProductManagement() {
                   Cancel
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
 
       {/* Add Category Modal */}
       {showCategoryForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Add New Category</h2>
-              <button
-                onClick={() => {
-                  setShowCategoryForm(false);
-                  setCategoryName('');
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={24} />
-              </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] flex flex-col">
+            <div className="flex-shrink-0 p-6 pb-4 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold text-gray-900">Add New Category</h2>
+                <button
+                  onClick={() => {
+                    setShowCategoryForm(false);
+                    setCategoryName('');
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={24} />
+                </button>
+              </div>
             </div>
-            <form onSubmit={handleAddCategory} className="space-y-4">
+            <div className="flex-1 overflow-y-auto p-6">
+              <form onSubmit={handleAddCategory} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category Name</label>
                 <input
@@ -457,9 +467,13 @@ export function ProductManagement() {
                   required
                 />
               </div>
-              <div className="flex space-x-3 pt-4">
+              </form>
+            </div>
+            <div className="flex-shrink-0 p-6 pt-4 border-t border-gray-200">
+              <div className="flex space-x-3">
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleAddCategory}
                   disabled={isSubmittingCategory}
                   className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
@@ -483,7 +497,7 @@ export function ProductManagement() {
                   Cancel
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}

@@ -33,12 +33,15 @@ export function CategoryProvider({ children }: { children: ReactNode }) {
       try {
         setLoading(true);
         setError(null);
+        console.log('CategoryContext: Fetching categories from API...');
         const apiCategories = await categoryService.getCategories();
         const appCategories = apiCategories.map(convertApiCategoryToAppCategory);
         setCategories(appCategories);
+        console.log('CategoryContext: Successfully loaded', appCategories.length, 'categories');
       } catch (err: any) {
+        console.warn('CategoryContext: API not available, using empty data:', err.message);
         setError(err.message || 'Failed to fetch categories');
-        console.error('Error fetching categories:', err);
+        setCategories([]); // Use empty array as fallback
       } finally {
         setLoading(false);
       }

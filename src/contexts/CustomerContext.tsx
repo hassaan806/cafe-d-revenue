@@ -36,9 +36,9 @@ export const CustomerProvider: React.FC<CustomerProviderProps> = ({ children }) 
     return {
       ...apiCustomer,
       // Map API fields to legacy fields for backward compatibility
-      cardRefId: apiCustomer.card_number,
-      rfId: apiCustomer.rfid_no,
-      createdAt: new Date(apiCustomer.created_at),
+      cardRefId: apiCustomer.card_number || '',
+      rfId: apiCustomer.rfid_no || '',
+      createdAt: apiCustomer.created_at ? new Date(apiCustomer.created_at) : new Date(),
       address: undefined // Not provided by API
     };
   };

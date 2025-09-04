@@ -275,11 +275,15 @@ export function Settings() {
 
       {/* Add/Edit Form */}
       {showAddForm && (
-        <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
-          <h3 className="text-lg font-semibold mb-4">
-            {editingUser ? 'Edit User' : 'Add New User'}
-          </h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] flex flex-col">
+            <div className="flex-shrink-0 p-6 pb-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold">
+                {editingUser ? 'Edit User' : 'Add New User'}
+              </h3>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -348,23 +352,27 @@ export function Settings() {
                 />
               </div>
             </div>
-
-            <div className="flex gap-3 pt-4">
-              <button
-                type="submit"
-                className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-2 rounded-lg transition-colors"
-              >
-                {editingUser ? 'Update User' : 'Create User'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowAddForm(false)}
-                className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-2 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
+              </form>
             </div>
-          </form>
+            <div className="flex-shrink-0 p-6 pt-4 border-t border-gray-200">
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-2 rounded-lg transition-colors"
+                >
+                  {editingUser ? 'Update User' : 'Create User'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(false)}
+                  className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-2 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

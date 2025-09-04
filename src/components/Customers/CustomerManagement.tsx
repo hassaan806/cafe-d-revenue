@@ -64,7 +64,6 @@ export function CustomerManagement() {
       setShowAddForm(false);
     } catch (error) {
       console.error('Failed to save customer:', error);
-      // Error is handled by the context
     } finally {
       setIsSubmitting(false);
     }
@@ -88,7 +87,7 @@ export function CustomerManagement() {
       setShowDeleteModal(null);
     } catch (error) {
       console.error('Failed to delete customer:', error);
-      // Error is handled by the context
+      // Error handled by the context
     }
   };
 
@@ -223,12 +222,15 @@ export function CustomerManagement() {
 
       {/* Add/Edit Customer Modal */}
       {showAddForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {editingCustomer ? 'Edit Customer' : 'Add New Customer'}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] flex flex-col">
+            <div className="flex-shrink-0 p-6 pb-4 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">
+                {editingCustomer ? 'Edit Customer' : 'Add New Customer'}
+              </h2>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                 <input
@@ -302,9 +304,13 @@ export function CustomerManagement() {
                   </div>
                 </div>
               </div>
-              <div className="flex space-x-3 pt-4">
+              </form>
+            </div>
+            <div className="flex-shrink-0 p-6 pt-4 border-t border-gray-200">
+              <div className="flex space-x-3">
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleSubmit}
                   disabled={isSubmitting}
                   className="flex-1 bg-amber-900 text-white py-2 px-4 rounded-lg hover:bg-amber-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
@@ -322,7 +328,7 @@ export function CustomerManagement() {
                   Cancel
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
