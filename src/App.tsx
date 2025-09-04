@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ProductProvider } from './contexts/ProductContext';
 import { CategoryProvider } from './contexts/CategoryContext';
@@ -19,6 +19,55 @@ import ErrorBoundary from './components/ErrorBoundary';
 function AppContent() {
   const { isAuthenticated, loading, user } = useAuth();
   const [activeView, setActiveView] = useState('dashboard');
+
+  // Get initial view from URL or localStorage
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewFromUrl = urlParams.get('view');
+    const viewFromStorage = localStorage.getItem('activeView');
+    
+    // Priority: URL parameter > localStorage > default dashboard
+    const initialView = viewFromUrl || viewFromStorage || 'dashboard';
+    
+    // Validate the view exists
+    const validViews = ['dashboard', 'sales', 'products', 'customers', 'cards', 'reports', 'settings'];
+    if (validViews.includes(initialView)) {
+      setActiveView(initialView);
+    } else {
+      setActiveView('dashboard');
+    }
+  }, []);
+
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const viewFromUrl = urlParams.get('view');
+      const validViews = ['dashboard', 'sales', 'products', 'customers', 'cards', 'reports', 'settings'];
+      
+      if (viewFromUrl && validViews.includes(viewFromUrl)) {
+        setActiveView(viewFromUrl);
+        localStorage.setItem('activeView', viewFromUrl);
+      } else {
+        setActiveView('dashboard');
+        localStorage.setItem('activeView', 'dashboard');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Update URL and localStorage when view changes
+  const handleViewChange = (newView: string) => {
+    setActiveView(newView);
+    localStorage.setItem('activeView', newView);
+    
+    // Update URL without page reload
+    const url = new URL(window.location.href);
+    url.searchParams.set('view', newView);
+    window.history.pushState({}, '', url.toString());
+  };
 
   console.log('App render - loading:', loading, 'isAuthenticated:', isAuthenticated, 'user:', user?.username);
 
@@ -44,7 +93,7 @@ function AppContent() {
   const renderView = () => {
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard onViewChange={setActiveView} />;
+        return <Dashboard onViewChange={handleViewChange} />;
       case 'sales':
         return <SalesPOS />;
       case 'products':
@@ -58,14 +107,14 @@ function AppContent() {
       case 'settings':
         return <Settings />;
       default:
-        return <Dashboard onViewChange={setActiveView} />;
+        return <Dashboard onViewChange={handleViewChange} />;
     }
   };
 
   return (
     <div className="h-screen flex bg-gray-50 overflow-hidden">
       {/* Fixed Sidebar */}
-      <Sidebar activeView={activeView} onViewChange={setActiveView} />
+      <Sidebar activeView={activeView} onViewChange={handleViewChange} />
       
       {/* Main Content Area - Scrollable */}
       <main className="flex-1 overflow-y-auto">
