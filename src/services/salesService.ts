@@ -8,14 +8,16 @@ export interface SaleItem {
 
 export interface Sale {
   id: number;
-  total_price: number;
-  payment_method: 'cash' | 'card' | 'easypaisa' | 'pending';
-  is_settled: boolean;
-  timestamp: string;
-  room_no: string;
   customer_id: number;
-  items: SaleItem[];
-  payments: any[]; 
+  payment_method: 'cash' | 'card' | 'easypaisa' | 'pending';
+  room_no: string | null;
+  is_settled: boolean;
+  total_price: number;
+  items: Array<{
+    product_id: number;
+    quantity: number;
+    subtotal: number;
+  }>;
 }
 
 export interface CreateSaleRequest {
@@ -35,7 +37,9 @@ export const salesService = {
   async getSales(): Promise<Sale[]> {
     try {
       console.log('Fetching sales...');
-      const response = await api.get<Sale[]>('/sales/');
+      const response = await api.get<Sale[]>('/sales/', {
+        timeout: 5000 // 5 second timeout for sales endpoint
+      });
       console.log('Sales fetched successfully:', response.data.length, 'sales');
       return response.data;
     } catch (error: any) {

@@ -4,7 +4,7 @@ export interface User {
   id: number;
   username: string;
   role: UserRole;
-  name?: string; // Optional since API doesn't return name
+  name?: string;
   email: string;
   phone?: string;
   is_active: boolean;

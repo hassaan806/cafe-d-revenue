@@ -31,26 +31,23 @@ export const SalesProvider: React.FC<SalesProviderProps> = ({ children }) => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Convert API sale to app sale format
   const convertApiSaleToAppSale = (apiSale: any): Sale => {
     return {
       ...apiSale,
-      // Map API fields to legacy fields for backward compatibility
       total: apiSale.total_price,
-      subtotal: apiSale.total_price, // Assuming no tax for now
+      subtotal: apiSale.total_price, 
       tax: 0,
       customerId: apiSale.customer_id?.toString() || '0',
-      salesmanId: '1', // Default salesman ID
+      salesmanId: '1', 
       createdAt: new Date(apiSale.timestamp),
       invoiceNumber: `INV-${apiSale.id?.toString().padStart(6, '0') || '000000'}`,
-      // Convert items to legacy format - handle undefined/null items
+     
       items: (apiSale.items || []).map((item: any) => ({
         ...item,
         productId: item.product_id?.toString() || '0',
-        productName: '', // Will be populated from product data
-        price: 0, // Will be calculated from product data
-        total: 0 // Will be calculated
+        productName: '',
+        price: 0, 
+        total: 0 
       }))
     };
   };
@@ -173,10 +170,6 @@ export const SalesProvider: React.FC<SalesProviderProps> = ({ children }) => {
     }
   };
 
-  // Load sales on mount
-  useEffect(() => {
-    refreshSales();
-  }, []);
 
   const value: SalesContextType = {
     sales,

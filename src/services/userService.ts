@@ -1,4 +1,4 @@
-import api from './api';
+import api, { retryApiCall } from './api';
 
 // Types for User Management API
 export interface CreateUserRequest {
@@ -6,7 +6,7 @@ export interface CreateUserRequest {
   email: string;
   password: string;
   role: 'admin' | 'manager' | 'salesman';
-  is_active?: boolean; // Optional, defaults to true
+  is_active?: boolean; 
 }
 
 export interface UpdateUserRequest {
@@ -38,7 +38,10 @@ export const userService = {
   async getUsers(params: GetUsersParams = {}): Promise<UserResponse[]> {
     try {
       console.log('Fetching users with params:', params);
-      const response = await api.get<UserResponse[]>('/users/', { params });
+      const response = await api.get<UserResponse[]>('/users/', { 
+        params,
+        timeout: 5000 // 5 second timeout for users endpoint
+      });
       console.log('Users fetched successfully:', response.data.length, 'users');
       return response.data;
     } catch (error: any) {
@@ -53,7 +56,6 @@ export const userService = {
   // Create a new user
   async createUser(userData: CreateUserRequest): Promise<UserResponse> {
     try {
-      // Ensure is_active is set to true by default if not provided
       const createData = {
         ...userData,
         is_active: userData.is_active !== undefined ? userData.is_active : true
@@ -78,7 +80,7 @@ export const userService = {
     }
   },
 
-  // Update a user (Admin only)
+  // Update a user 
   async updateUser(userId: number, userData: UpdateUserRequest): Promise<UserResponse> {
     try {
       console.log('Updating user:', userId, userData);
@@ -94,7 +96,7 @@ export const userService = {
     }
   },
 
-  // Delete a user (Admin only)
+  // Delete a user 
   async deleteUser(userId: number): Promise<string> {
     try {
       console.log('Deleting user:', userId);
@@ -111,7 +113,6 @@ export const userService = {
   }
 };
 
-// Make functions available globally for debugging
 if (typeof window !== 'undefined') {
   (window as any).userService = userService;
 }

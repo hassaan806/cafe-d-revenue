@@ -1,6 +1,5 @@
-import api from './api';
+import api, { retryApiCall, handleApiError } from './api';
 
-// Types for Product Management API
 export interface Product {
   id: number;
   name: string;
@@ -42,10 +41,7 @@ export const productService = {
       return response.data;
     } catch (error: any) {
       console.error('Failed to fetch products:', error);
-      throw new Error(
-        error.response?.data?.detail?.[0]?.msg || 
-        'Failed to fetch products. Please try again.'
-      );
+      throw new Error(handleApiError(error, 'Failed to fetch products. Please try again.'));
     }
   },
 
@@ -139,7 +135,6 @@ export const productService = {
   }
 };
 
-// Make functions available globally for debugging
 if (typeof window !== 'undefined') {
   (window as any).productService = productService;
 }

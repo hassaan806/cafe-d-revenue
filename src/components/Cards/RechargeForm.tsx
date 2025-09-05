@@ -35,7 +35,6 @@ export function RechargeForm({ isOpen, onClose, onRecharge, customer }: Recharge
           balance: customer.balance + amount
         });
 
-        // Call the original onRecharge callback for local state updates
         onRecharge(customer.id.toString(), amount);
         
         setAmount(0);
@@ -43,7 +42,7 @@ export function RechargeForm({ isOpen, onClose, onRecharge, customer }: Recharge
         onClose();
       } catch (error) {
         console.error('Failed to recharge:', error);
-        // Error is handled by the context
+      
       } finally {
         setIsSubmitting(false);
       }

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Product } from '../types';
 import { productService, Product as ApiProduct } from '../services/productService';
+import { retryApiCall } from '../services/api';
 
 interface ProductContextType {
   products: Product[];
@@ -14,7 +15,6 @@ interface ProductContextType {
 
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
 
-// Helper function to convert API product to app product
 const convertApiProductToAppProduct = (apiProduct: ApiProduct): Product => ({
   id: apiProduct.id,
   name: apiProduct.name,
@@ -25,8 +25,7 @@ const convertApiProductToAppProduct = (apiProduct: ApiProduct): Product => ({
   category_id: apiProduct.category_id,
   created_at: apiProduct.created_at,
   updated_at: apiProduct.updated_at,
-  // Legacy fields for backward compatibility
-  category: 'General', // Default category since API doesn't provide category name
+  category: 'General', 
   imageUrl: apiProduct.image_url,
 });
 
@@ -35,21 +34,20 @@ export function ProductProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch products on component mount
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
         setError(null);
         console.log('ProductContext: Fetching products from API...');
-        const apiProducts = await productService.getProducts();
+        const apiProducts = await retryApiCall(() => productService.getProducts());
         const appProducts = apiProducts.map(convertApiProductToAppProduct);
         setProducts(appProducts);
         console.log('ProductContext: Successfully loaded', appProducts.length, 'products');
       } catch (err: any) {
         console.warn('ProductContext: API not available, using empty data:', err.message);
         setError(err.message || 'Failed to fetch products');
-        setProducts([]); // Use empty array as fallback
+        setProducts([]); 
       } finally {
         setLoading(false);
       }
@@ -67,7 +65,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
         price: productData.price,
         stock: productData.stock,
         image_url: productData.image_url || '',
-        category_id: productData.category_id || 1, // Default category ID
+        category_id: productData.category_id || 1, 
       });
       
       const appProduct = convertApiProductToAppProduct(apiProduct);
@@ -113,7 +111,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
       setError(null);
-      const apiProducts = await productService.getProducts();
+      const apiProducts = await retryApiCall(() => productService.getProducts());
       const appProducts = apiProducts.map(convertApiProductToAppProduct);
       setProducts(appProducts);
     } catch (err: any) {

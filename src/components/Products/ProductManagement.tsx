@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Product, Category } from '../../types';
+import { Product } from '../../types';
 import { useProducts } from '../../contexts/ProductContext';
 import { useCategories } from '../../contexts/CategoryContext';
 import { 
@@ -12,13 +12,13 @@ import {
   Filter,
   Loader2,
   AlertCircle,
-  Upload,
   Tag,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
 
 export function ProductManagement() {
-  const { products, loading, error, addProduct, updateProduct, deleteProduct } = useProducts();
+  const { products, loading, error, addProduct, updateProduct, deleteProduct, refreshProducts } = useProducts();
   const { categories, loading: categoriesLoading, error: categoriesError, addCategory, deleteCategory } = useCategories();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -108,7 +108,6 @@ export function ProductManagement() {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedImage(file);
-      // You could also preview the image here
     }
   };
 
@@ -173,9 +172,19 @@ export function ProductManagement() {
       {/* Error Display */}
       {(error || categoriesError) && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <AlertCircle className="text-red-400 mr-2" size={20} />
-            <p className="text-red-800">{error || categoriesError}</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <AlertCircle className="text-red-400 mr-2" size={20} />
+              <p className="text-red-800">{error || categoriesError}</p>
+            </div>
+            <button
+              onClick={refreshProducts}
+              disabled={loading}
+              className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 disabled:opacity-50 flex items-center space-x-1"
+            >
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+              <span>Retry</span>
+            </button>
           </div>
         </div>
       )}

@@ -31,15 +31,14 @@ export const RechargeProvider: React.FC<RechargeProviderProps> = ({ children }) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Convert API recharge to app recharge format
   const convertApiRechargeToAppRecharge = (apiRecharge: any): RechargeTransaction => {
     return {
       ...apiRecharge,
       // Map API fields to legacy fields for backward compatibility
       customerId: apiRecharge.customer_id?.toString() || '0',
       timestamp: apiRecharge.recharge_date ? new Date(apiRecharge.recharge_date) : new Date(),
-      previousBalance: 0, // Not provided by API
-      newBalance: 0 // Not provided by API
+      previousBalance: 0,
+      newBalance: 0 
     };
   };
 

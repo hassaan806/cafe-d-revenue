@@ -47,23 +47,23 @@ export function Settings() {
     confirmPassword: ''
   });
 
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const apiUsers = await userService.getUsers();
+      const appUsers = apiUsers.map(convertApiUserToAppUser);
+      setUsers(appUsers);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch users');
+      console.error('Error fetching users:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch users on component mount
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const apiUsers = await userService.getUsers();
-        const appUsers = apiUsers.map(convertApiUserToAppUser);
-        setUsers(appUsers);
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch users');
-        console.error('Error fetching users:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchUsers();
   }, []);
 
@@ -242,9 +242,19 @@ export function Settings() {
       {/* Error Display */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <AlertCircle className="text-red-400 mr-2" size={20} />
-            <p className="text-red-800">{error}</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <AlertCircle className="text-red-400 mr-2" size={20} />
+              <p className="text-red-800">{error}</p>
+            </div>
+            <button
+              onClick={fetchUsers}
+              disabled={loading}
+              className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 disabled:opacity-50 flex items-center space-x-1"
+            >
+              <Loader2 size={14} className={loading ? 'animate-spin' : ''} />
+              <span>Retry</span>
+            </button>
           </div>
         </div>
       )}

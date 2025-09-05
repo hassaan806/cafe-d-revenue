@@ -44,7 +44,6 @@ export function CardManagement() {
       });
     } catch (error) {
       console.error('Failed to create customer:', error);
-      // Error is handled by the context
     }
   };
 
@@ -54,7 +53,6 @@ export function CardManagement() {
       const previousBalance = customer.balance;
       const newBalance = previousBalance + amount;
 
-      // Add transaction to history
       const transaction: RechargeTransaction = {
         id: Date.now(), // Use timestamp as ID for local transactions
         customer_id: parseInt(customerId),

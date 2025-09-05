@@ -20,16 +20,47 @@ function AppContent() {
   const { isAuthenticated, loading, user } = useAuth();
   const [activeView, setActiveView] = useState('dashboard');
 
-  // Get initial view from URL or localStorage
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Load contexts only when authenticated
+  if (!isAuthenticated) {
+    return <LoginForm />;
+  }
+
+  return (
+    <ProductProvider>
+      <CategoryProvider>
+        <CustomerProvider>
+          <RechargeProvider>
+            <SalesProvider>
+              <AppMainContent activeView={activeView} setActiveView={setActiveView} user={user} />
+            </SalesProvider>
+          </RechargeProvider>
+        </CustomerProvider>
+      </CategoryProvider>
+    </ProductProvider>
+  );
+}
+
+function AppMainContent({ activeView, setActiveView, user }: { activeView: string; setActiveView: (view: string) => void; user: any }) {
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const viewFromUrl = urlParams.get('view');
     const viewFromStorage = localStorage.getItem('activeView');
     
-    // Priority: URL parameter > localStorage > default dashboard
     const initialView = viewFromUrl || viewFromStorage || 'dashboard';
     
-    // Validate the view exists
     const validViews = ['dashboard', 'sales', 'products', 'customers', 'cards', 'reports', 'settings'];
     if (validViews.includes(initialView)) {
       setActiveView(initialView);
@@ -38,7 +69,6 @@ function AppContent() {
     }
   }, []);
 
-  // Handle browser back/forward buttons
   useEffect(() => {
     const handlePopState = () => {
       const urlParams = new URLSearchParams(window.location.search);
@@ -69,26 +99,7 @@ function AppContent() {
     window.history.pushState({}, '', url.toString());
   };
 
-  console.log('App render - loading:', loading, 'isAuthenticated:', isAuthenticated, 'user:', user?.username);
-
-  // Show loading spinner while checking authentication
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    console.log('Not authenticated, showing login form');
-    return <LoginForm />;
-  }
-
-  console.log('Authenticated, showing main app');
+  console.log('App render - user:', user?.username);
 
   const renderView = () => {
     switch (activeView) {
@@ -128,17 +139,7 @@ function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <ProductProvider>
-          <CategoryProvider>
-            <CustomerProvider>
-              <RechargeProvider>
-                <SalesProvider>
-                  <AppContent />
-                </SalesProvider>
-              </RechargeProvider>
-            </CustomerProvider>
-          </CategoryProvider>
-        </ProductProvider>
+        <AppContent />
       </AuthProvider>
     </ErrorBoundary>
   );

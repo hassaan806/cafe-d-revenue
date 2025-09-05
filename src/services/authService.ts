@@ -29,63 +29,6 @@ export interface ApiError {
   }>;
 }
 
-// Test API connection
-export const testApiConnection = async (): Promise<boolean> => {
-  try {
-    console.log('Testing API connection to:', import.meta.env.VITE_API_URL || 'https://03ksvhps-8000.inc1.devtunnels.ms');
-  
-    const response = await api.get('/docs');
-    console.log('API connection test response:', response.status);
-    return true;
-  } catch (error: any) {
-    console.error('API connection test failed:', error);
-    console.error('Error details:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      message: error.message
-    });
-    return false;
-  }
-};
-
-// Test login 
-export const testLoginEndpoint = async (): Promise<boolean> => {
-  try {
-    console.log('Testing login endpoint...');
-    // to see if the endpoint responds
-    const response = await api.post('/auth/login', {
-      username_or_email: 'test',
-      password: 'test'
-    });
-    console.log('Login endpoint test response:', response.status);
-    return true;
-  } catch (error: any) {
-    console.error('Login endpoint test failed:', error);
-    console.error('Error details:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      message: error.message,
-      code: error.code
-    });
-    return false;
-  }
-};
-
-// Test login function
-export const testLogin = async (username: string, password: string) => {
-  try {
-    console.log('Testing login with:', username);
-    const result = await authService.login({ username_or_email: username, password });
-    console.log('Test login result:', result);
-    return result;
-  } catch (error: any) {
-    console.error('Test login failed:', error);
-    return null;
-  }
-};
-
 // Authentication service functions
 export const authService = {
   // Login user
@@ -113,10 +56,11 @@ export const authService = {
       } else if (error.response?.status === 401) {
         throw new Error('Invalid username or password');
       } else if (error.code === 'NETWORK_ERROR' || !error.response) {
-        throw new Error('Network error. Please check your connection and try again.');
+        throw new Error(error.userMessage || 'Network error. Please check your connection and try again.');
       } else {
         throw new Error(
           error.response?.data?.detail?.[0]?.msg || 
+          error.userMessage ||
           'Login failed. Please check your credentials.'
         );
       }
@@ -126,7 +70,7 @@ export const authService = {
   async getCurrentUser(): Promise<User> {
     try {
       console.log('Making getCurrentUser request to:', '/auth/me');
-      const response = await api.get<User>('/auth/me', { timeout: 10000 }); // 10 second timeout
+      const response = await api.get<User>('/auth/me', { timeout: 5000 }); // 5 second timeout
       console.log('GetCurrentUser response received:', response.status, response.data);
       return response.data;
     } catch (error: any) {
@@ -173,10 +117,7 @@ export const authService = {
   }
 };
 
-// Make functions available globally for debugging
+// Make authService available globally for debugging
 if (typeof window !== 'undefined') {
-  (window as any).testApiConnection = testApiConnection;
-  (window as any).testLoginEndpoint = testLoginEndpoint;
-  (window as any).testLogin = testLogin;
   (window as any).authService = authService;
 }

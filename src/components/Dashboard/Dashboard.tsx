@@ -29,8 +29,9 @@ export function Dashboard({ onViewChange }: DashboardProps) {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [trendsData, setTrendsData] = useState<any>(null);
   const [customerInsights, setCustomerInsights] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [dateRange, setDateRange] = useState('today');
   const [customDateRange, setCustomDateRange] = useState({
     fromDate: '',
@@ -84,33 +85,30 @@ export function Dashboard({ onViewChange }: DashboardProps) {
     }
   };
 
-  // Fetch dashboard data from API
+  // Fetch dashboard data 
   const fetchDashboardData = async () => {
-    setLoading(true);
+    setRefreshing(true);
     setError(null);
     
     try {
       const { fromDate, toDate } = getDateRange();
       
-      // Fetch all dashboard data in parallel
-      const [overview, trends, insights] = await Promise.all([
-        dashboardService.getOverview(fromDate, toDate),
-        dashboardService.getSalesTrends(30),
-        dashboardService.getCustomerInsights(5)
-      ]);
-      
+      // Fetch only overview data for now 
+      const overview = await dashboardService.getOverview(fromDate, toDate);
       setDashboardData(overview);
-      setTrendsData(trends);
-      setCustomerInsights(insights);
+      
+      // Set mock data for other sections
+      setTrendsData([]);
+      setCustomerInsights([]);
+      
     } catch (error: any) {
       console.error('Failed to fetch dashboard data:', error);
       setError(error.message || 'Failed to fetch dashboard data');
     } finally {
-      setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  // Load dashboard data on mount and when date range changes
   useEffect(() => {
     fetchDashboardData();
   }, [dateRange, customDateRange.fromDate, customDateRange.toDate]);
@@ -166,11 +164,11 @@ export function Dashboard({ onViewChange }: DashboardProps) {
           </select>
           <button
             onClick={fetchDashboardData}
-            disabled={loading}
+            disabled={refreshing}
             className="bg-amber-900 text-white px-4 py-2 rounded-lg hover:bg-amber-800 transition-colors disabled:opacity-50 flex items-center space-x-2"
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            <span>Refresh</span>
+            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+            <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
           </button>
           <div className="bg-amber-900 text-white px-4 py-2 rounded-lg">
             <span className="text-sm font-medium capitalize">{user?.role}</span>
@@ -338,7 +336,7 @@ export function Dashboard({ onViewChange }: DashboardProps) {
           </h3>
           <div className="bg-gray-50 rounded-lg p-4">
             <pre className="text-sm text-gray-700 whitespace-pre-wrap overflow-x-auto">
-              {dashboardData}
+              {typeof dashboardData === 'string' ? dashboardData : JSON.stringify(dashboardData, null, 2)}
             </pre>
           </div>
         </div>
@@ -353,7 +351,7 @@ export function Dashboard({ onViewChange }: DashboardProps) {
           </h3>
           <div className="bg-gray-50 rounded-lg p-4">
             <pre className="text-sm text-gray-700 whitespace-pre-wrap overflow-x-auto">
-              {trendsData}
+              {typeof trendsData === 'string' ? trendsData : JSON.stringify(trendsData, null, 2)}
             </pre>
           </div>
         </div>
@@ -368,7 +366,7 @@ export function Dashboard({ onViewChange }: DashboardProps) {
           </h3>
           <div className="bg-gray-50 rounded-lg p-4">
             <pre className="text-sm text-gray-700 whitespace-pre-wrap overflow-x-auto">
-              {customerInsights}
+              {typeof customerInsights === 'string' ? customerInsights : JSON.stringify(customerInsights, null, 2)}
             </pre>
           </div>
         </div>

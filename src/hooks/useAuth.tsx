@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User } from '../types';
+import { User, UserRole } from '../types';
 import { authService, User as ApiUser } from '../services/authService';
 
 interface AuthContextType {
@@ -77,45 +77,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       console.log('Login API successful, got token:', loginResponse.auth_token ? 'YES' : 'NO');
 
-      // Store token FIRST before making authenticated requests
+      // Store token first
       localStorage.setItem('authToken', loginResponse.auth_token);
       console.log('Token stored in localStorage');
-
+      
+      // Get user data from /auth/me endpoint
       try {
-        // Try to get user information, but don't fail login if this times out
-        const userInfo = await authService.getCurrentUser();
-        console.log('Got user info:', userInfo.username);
+        const userData = await authService.getCurrentUser();
+        console.log('Got user data:', userData);
         
-        // Store complete authentication data
-        authService.storeAuthData(loginResponse.auth_token, userInfo);
-        console.log('Stored complete auth data in localStorage');
-        
-        // Convert and set user
-        const appUser = convertApiUserToAppUser(userInfo);
+        const appUser = convertApiUserToAppUser(userData);
+        authService.storeAuthData(loginResponse.auth_token, userData);
         setUser(appUser);
         console.log('Set user in state:', appUser.username);
-      } catch (userInfoError: any) {
-        console.warn('Failed to fetch user info, using fallback user data:', userInfoError.message);
-        
-        // Fallback: Create a basic user object from the username
-        const fallbackUser: User = {
-          id: 1, // Default ID
+      } catch (userError: any) {
+        console.error('Failed to get user data:', userError);
+        // Create a default user object if /auth/me fails
+        const defaultUser: User = {
+          id: 1,
           username: username,
-          role: 'admin', // Default to admin for now
+          role: 'admin' as UserRole,
           name: username,
-          email: `${username}@example.com`, // Fallback email
+          email: `${username}@example.com`,
           phone: undefined,
           is_active: true,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
-        
-        // Store fallback authentication data
-        authService.storeAuthData(loginResponse.auth_token, fallbackUser);
-        console.log('Stored fallback auth data in localStorage');
-        
-        setUser(fallbackUser);
-        console.log('Set fallback user in state:', fallbackUser.username);
+        authService.storeAuthData(loginResponse.auth_token, defaultUser);
+        setUser(defaultUser);
+        console.log('Set default user in state:', defaultUser.username);
       }
       
       return { success: true };

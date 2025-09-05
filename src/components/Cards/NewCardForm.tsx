@@ -18,7 +18,6 @@ export function NewCardForm({ isOpen, onClose, onSave, existingCustomers }: NewC
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
       setFormData({
@@ -66,8 +65,8 @@ export function NewCardForm({ isOpen, onClose, onSave, existingCustomers }: NewC
         name: formData.name.trim(),
         phone: formData.phone.trim(),
         cardRefId: formData.cardRefId.trim(),
-        balance: 0, // Always 0 for new cards
-        // Add RF ID to the customer data if provided
+        balance: 0, 
+        
         ...(formData.rfId.trim() && { rfId: formData.rfId.trim() })
       } as any);
       
@@ -83,31 +82,27 @@ export function NewCardForm({ isOpen, onClose, onSave, existingCustomers }: NewC
     }
   };
 
+  //for phone number formatting
   const formatPhoneNumber = (value: string): string => {
-    // Remove all non-digit characters
+
     const digits = value.replace(/\D/g, '');
     
-    // Handle Pakistan phone number format: +92-XXX-XXXXXXX
     if (digits.length === 0) return '';
     if (digits.length <= 2) return `+${digits}`;
     if (digits.length <= 5) return `+${digits.slice(0, 2)}-${digits.slice(2)}`;
     if (digits.length <= 12) return `+${digits.slice(0, 2)}-${digits.slice(2, 5)}-${digits.slice(5)}`;
-    
-    // Limit to 12 digits total
     return `+${digits.slice(0, 2)}-${digits.slice(2, 5)}-${digits.slice(5, 12)}`;
   };
 
   const handleInputChange = (field: string, value: string) => {
     let processedValue = value;
-    
-    // Auto-format phone number
     if (field === 'phone') {
       processedValue = formatPhoneNumber(value);
     }
     
     setFormData(prev => ({ ...prev, [field]: processedValue }));
     
-    // Clear error when user starts typing
+    
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }

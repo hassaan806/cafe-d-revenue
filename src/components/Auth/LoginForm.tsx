@@ -9,19 +9,6 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
 
-  // Test API connection on component mount
-  React.useEffect(() => {
-    const testConnection = async () => {
-      try {
-        const { testApiConnection } = await import('../../services/authService');
-        await testApiConnection();
-      } catch (error) {
-        console.error('Failed to test API connection:', error);
-      }
-    };
-    testConnection();
-  }, []);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Login form submitted with:', username);

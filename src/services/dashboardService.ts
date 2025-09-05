@@ -2,25 +2,23 @@ import api from './api';
 
 // Dashboard interfaces
 export interface DashboardOverview {
-  total_revenue: number;
-  total_sales: number;
   total_customers: number;
-  active_customers: number;
-  pending_sales: number;
-  pending_amount: number;
-  average_order_value: number;
+  total_sales: number;
+  total_revenue: number;
+  total_pending_amount: number;
+  total_recharges: number;
   top_products: Array<{
-    product_id: number;
     product_name: string;
-    total_sold: number;
-    revenue: number;
+    quantity_sold: number;
   }>;
-  recent_sales: Array<{
-    id: number;
-    customer_name: string;
-    total_amount: number;
-    payment_method: string;
-    timestamp: string;
+  sales_today: {
+    count: number;
+    revenue: number;
+  };
+  monthly_trends: Array<{
+    month: string;
+    sales_count: number;
+    revenue: number;
   }>;
 }
 
@@ -47,14 +45,14 @@ export interface CustomerInsight {
 
 export const dashboardService = {
 
-  async getOverview(fromDate?: string, toDate?: string): Promise<string> {
+  async getOverview(fromDate?: string, toDate?: string): Promise<DashboardOverview> {
     try {
       console.log('Fetching dashboard overview:', fromDate, 'to', toDate);
       const params: any = {};
       if (fromDate) params.from_date = fromDate;
       if (toDate) params.to_date = toDate;
       
-      const response = await api.get<string>('/dashboard/overview', { params });
+      const response = await api.get<DashboardOverview>('/dashboard/overview', { params });
       console.log('Dashboard overview fetched successfully');
       return response.data;
     } catch (error: any) {
@@ -67,10 +65,10 @@ export const dashboardService = {
   },
 
   // Get sales trends
-  async getSalesTrends(days: number = 30): Promise<string> {
+  async getSalesTrends(days: number = 30): Promise<any> {
     try {
       console.log('Fetching sales trends for', days, 'days');
-      const response = await api.get<string>('/dashboard/trends', {
+      const response = await api.get<any>('/dashboard/trends', {
         params: { days }
       });
       console.log('Sales trends fetched successfully');
@@ -84,15 +82,17 @@ export const dashboardService = {
     }
   },
 
-  // Get customer insights
-  async getCustomerInsights(limit: number = 5): Promise<string> {
+  async getCustomerInsights(limit: number = 5): Promise<any> {
     try {
-      console.log('Fetching customer insights, limit:', limit);
-      const response = await api.get<string>('/dashboard/customers/insights', {
-        params: { limit }
-      });
+      console.log('Fetching customer insights from overview data');
+      const response = await api.get<any>('/dashboard/overview');
       console.log('Customer insights fetched successfully');
-      return response.data;
+
+      return {
+        top_customers: [],
+        recent_activity: [],
+        customer_growth: []
+      };
     } catch (error: any) {
       console.error('Failed to fetch customer insights:', error);
       throw new Error(

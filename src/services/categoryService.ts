@@ -99,7 +99,6 @@ export const categoryService = {
   }
 };
 
-// Make functions available globally for debugging
 if (typeof window !== 'undefined') {
   (window as any).categoryService = categoryService;
 }

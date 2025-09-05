@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSales } from '../../contexts/SalesContext';
-import { useProducts } from '../../contexts/ProductContext';
 import { reportsService } from '../../services/reportsService';
 import { 
   BarChart3, 
@@ -13,13 +12,11 @@ import {
   Users,
   Loader2,
   FileText,
-  PieChart,
-  BarChart
+  PieChart
 } from 'lucide-react';
 
 export function Reports() {
   const { sales, loading, error } = useSales();
-  const { products } = useProducts();
   const [dateRange, setDateRange] = useState('today');
   const [selectedReport, setSelectedReport] = useState('overview');
   const [reportData, setReportData] = useState<any>(null);
@@ -36,14 +33,24 @@ export function Reports() {
   let filteredSales = sales;
   if (dateRange === 'today') {
     filteredSales = sales.filter(sale => {
-      const saleDate = new Date(sale.timestamp || sale.createdAt);
+      const timestamp = sale.timestamp || sale.createdAt;
+      if (!timestamp) return false;
+      const saleDate = new Date(timestamp);
       return saleDate.toDateString() === today.toDateString();
     });
   } else if (dateRange === 'week') {
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    filteredSales = sales.filter(sale => new Date(sale.timestamp || sale.createdAt) >= weekAgo);
+    filteredSales = sales.filter(sale => {
+      const timestamp = sale.timestamp || sale.createdAt;
+      if (!timestamp) return false;
+      return new Date(timestamp) >= weekAgo;
+    });
   } else if (dateRange === 'month') {
-    filteredSales = sales.filter(sale => new Date(sale.timestamp || sale.createdAt) >= startOfMonth);
+    filteredSales = sales.filter(sale => {
+      const timestamp = sale.timestamp || sale.createdAt;
+      if (!timestamp) return false;
+      return new Date(timestamp) >= startOfMonth;
+    });
   }
 
   const totalRevenue = filteredSales.reduce((sum, sale) => sum + (sale.total || sale.total_price), 0);
@@ -52,7 +59,7 @@ export function Reports() {
 
   // Payment method breakdown
   const paymentBreakdown = filteredSales.reduce((acc, sale) => {
-    const paymentMethod = sale.payment_method || sale.paymentMethod;
+    const paymentMethod = sale.payment_method;
     const total = sale.total || sale.total_price;
     acc[paymentMethod] = (acc[paymentMethod] || 0) + total;
     return acc;
@@ -404,17 +411,23 @@ export function Reports() {
                   </td>
                   <td className="py-3">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      sale.paymentMethod === 'cash' ? 'bg-green-100 text-green-800' :
-                      sale.paymentMethod === 'card' ? 'bg-blue-100 text-blue-800' :
-                      sale.paymentMethod === 'easypaisa' ? 'bg-purple-100 text-purple-800' :
+                      sale.payment_method === 'cash' ? 'bg-green-100 text-green-800' :
+                      sale.payment_method === 'card' ? 'bg-blue-100 text-blue-800' :
+                      sale.payment_method === 'easypaisa' ? 'bg-purple-100 text-purple-800' :
                       'bg-orange-100 text-orange-800'
                     }`}>
-                      {sale.paymentMethod.toUpperCase()}
+                      {sale.payment_method.toUpperCase()}
                     </span>
                   </td>
                   <td className="py-3 font-semibold">PKR {sale.total}</td>
                   <td className="py-3 text-gray-500">
-                    {new Date(sale.createdAt).toLocaleDateString()} {new Date(sale.createdAt).toLocaleTimeString()}
+                    {sale.createdAt ? (
+                      <>
+                        {new Date(sale.createdAt).toLocaleDateString()} {new Date(sale.createdAt).toLocaleTimeString()}
+                      </>
+                    ) : (
+                      'N/A'
+                    )}
                   </td>
                 </tr>
               ))}

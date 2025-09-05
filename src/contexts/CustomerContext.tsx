@@ -31,19 +31,16 @@ export const CustomerProvider: React.FC<CustomerProviderProps> = ({ children }) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Convert API customer to app customer format
   const convertApiCustomerToAppCustomer = (apiCustomer: any): Customer => {
     return {
       ...apiCustomer,
-      // Map API fields to legacy fields for backward compatibility
       cardRefId: apiCustomer.card_number || '',
       rfId: apiCustomer.rfid_no || '',
       createdAt: apiCustomer.created_at ? new Date(apiCustomer.created_at) : new Date(),
-      address: undefined // Not provided by API
+      address: undefined 
     };
   };
 
-  // Convert app customer to API format
   const convertAppCustomerToApiCustomer = (appCustomer: any) => {
     return {
       name: appCustomer.name,

@@ -2,7 +2,6 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { Category } from '../types';
 import { categoryService, Category as ApiCategory } from '../services/categoryService';
 
-// Helper function to convert API category to app category
 const convertApiCategoryToAppCategory = (apiCategory: ApiCategory): Category => ({
   id: apiCategory.id,
   name: apiCategory.name,

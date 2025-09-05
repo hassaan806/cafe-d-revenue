@@ -21,7 +21,7 @@ import {
 export function SalesPOS() {
   const { products } = useProducts();
   const { customers } = useCustomers();
-  const { addSale, loading } = useSales();
+  const { addSale } = useSales();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [cartItems, setCartItems] = useState<SaleItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -47,7 +47,7 @@ export function SalesPOS() {
     createdAt: Date;
   } | null>(null);
 
-  const categories = ['all', ...new Set(products.map(p => p.category))];
+  const categories = ['all', ...new Set(products.map(p => p.category).filter(Boolean))];
   
   const filteredProducts = products.filter(product => {
     const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
@@ -92,7 +92,7 @@ export function SalesPOS() {
     setCartItems(cartItems.filter(item => item.productId !== productId && item.product_id !== parseInt(productId)));
   };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.total, 0);
+  const subtotal = cartItems.reduce((sum, item) => sum + (item.total || 0), 0);
   const total = subtotal; // Removed GST calculation
   const paid = parseFloat(paidAmount) || 0;
   const change = paid - total;
@@ -204,7 +204,7 @@ export function SalesPOS() {
             {categories.map((category) => (
               <button
                 key={category}
-                onClick={() => setSelectedCategory(category)}
+                onClick={() => setSelectedCategory(category || 'all')}
                 className={`px-4 py-2 rounded-lg whitespace-nowrap font-medium transition-colors ${
                   selectedCategory === category
                     ? 'bg-amber-900 text-white'
@@ -281,12 +281,14 @@ export function SalesPOS() {
               </div>
             ) : (
               <div className="space-y-3">
-                {cartItems.map((item) => (
-                  <div key={item.productId} className="bg-gray-50 rounded-lg p-3">
+                {cartItems.map((item) => {
+                  const productId = item.productId || item.product_id?.toString() || '';
+                  return (
+                    <div key={productId} className="bg-gray-50 rounded-lg p-3">
                     <div className="flex justify-between items-start mb-2">
                       <span className="font-medium text-gray-900 text-sm">{item.productName}</span>
                       <button
-                        onClick={() => removeFromCart(item.productId)}
+                          onClick={() => removeFromCart(productId)}
                         className="text-red-600 hover:text-red-800"
                       >
                         <Trash2 size={14} />
@@ -295,23 +297,24 @@ export function SalesPOS() {
                     <div className="flex justify-between items-center">
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => updateQuantity(item.productId, -1)}
+                            onClick={() => updateQuantity(productId, -1)}
                           className="w-6 h-6 rounded-full bg-gray-300 hover:bg-gray-400 flex items-center justify-center"
                         >
                           <Minus size={12} />
                         </button>
                         <span className="w-8 text-center font-medium">{item.quantity}</span>
                         <button
-                          onClick={() => updateQuantity(item.productId, 1)}
+                            onClick={() => updateQuantity(productId, 1)}
                           className="w-6 h-6 rounded-full bg-amber-900 hover:bg-amber-800 text-white flex items-center justify-center"
                         >
                           <Plus size={12} />
                         </button>
                       </div>
-                      <span className="font-semibold text-gray-900">PKR {item.total}</span>
+                        <span className="font-semibold text-gray-900">PKR {item.total || 0}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
