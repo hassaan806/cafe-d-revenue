@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar styling */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Custom responsive utilities */
+@layer utilities {
+  .text-responsive {
+    @apply text-sm lg:text-base;
+  }
+  
+  .p-responsive {
+    @apply p-3 lg:p-4;
+  }
+  
+  .gap-responsive {
+    @apply gap-3 lg:gap-4;
+  }
+}

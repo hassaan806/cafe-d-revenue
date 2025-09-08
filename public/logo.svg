@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <style>
+      .logo-circle { fill: #2d2d2d; stroke: #2d2d2d; stroke-width: 6; }
+      .logo-utensils { fill: white; }
+      .logo-text-main { font-family: 'Brush Script MT', cursive; font-size: 48px; fill: #2d2d2d; }
+      .logo-text-sub { font-family: Arial, sans-serif; font-size: 24px; fill: #4a5568; font-weight: bold; }
+    </style>
+  </defs>
+  
+  <!-- Outer circle -->
+  <circle cx="200" cy="150" r="120" class="logo-circle"/>
+  
+  <!-- Fork -->
+  <rect x="165" y="80" width="8" height="80" rx="4" class="logo-utensils"/>
+  <rect x="175" y="80" width="8" height="80" rx="4" class="logo-utensils"/>
+  <rect x="185" y="80" width="8" height="80" rx="4" class="logo-utensils"/>
+  <rect x="160" y="160" width="38" height="60" rx="19" class="logo-utensils"/>
+  
+  <!-- Spoon -->
+  <ellipse cx="225" cy="110" rx="15" ry="25" class="logo-utensils"/>
+  <rect x="220" y="130" width="10" height="60" rx="5" class="logo-utensils"/>
+  
+  <!-- Text -->
+  <text x="200" y="320" text-anchor="middle" class="logo-text-main">Cafe de' Revenue</text>
+  <text x="200" y="360" text-anchor="middle" class="logo-text-sub">Bliss on Plate</text>
+</svg>
