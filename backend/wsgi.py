@@ -1,6 +1,6 @@
 """
-WSGI entry point for the Cafe Revenue Management System
-This file provides the WSGI callable object for production deployment.
+WSGI entry point for cPanel deployment
+This file provides the WSGI callable object for production deployment on cPanel.
 """
 
 import sys
@@ -13,9 +13,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from app.main import app
 
 # The WSGI callable object is 'app'
-# This can be referenced as 'backend.wsgi:app' in production WSGI servers
+# This should be referenced as 'backend.wsgi:app' in cPanel Python application settings
 
+# For local testing
 if __name__ == "__main__":
-    # This is for development/testing only
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=9000)
