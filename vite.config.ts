@@ -12,7 +12,7 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:9001',  // Changed to port 9001
+        target: 'http://127.0.0.1:9000',  // Backend server port
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },

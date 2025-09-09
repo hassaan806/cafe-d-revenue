@@ -12,4 +12,4 @@ if __name__ == "__main__":
     print("Starting backend server...")
     print("Server will be available at http://127.0.0.1:9000")
     print("Documentation available at http://127.0.0.1:9000/docs")
-    uvicorn.run(app, host="127.0.0.1", port=9001)  # Changed to port 9001
+    uvicorn.run(app, host="127.0.0.1", port=9000)
