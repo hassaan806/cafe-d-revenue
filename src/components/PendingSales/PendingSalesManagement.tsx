@@ -259,18 +259,9 @@ export function PendingSalesManagement() {
         `Batch settlement completed: ${result.settled_count} settled, ${result.failed_count} failed`
       );
       
-      // Send SMS notification for card payments
+      // SMS notification for card payments is automatically sent by the backend
       if (paymentMethod === 'card' && customer) {
-        console.log(`Sending batch settlement SMS to ${customer.name} (${customer.phone}) for ${result.settled_count} sales`);
-        // In a real implementation, this would trigger an SMS notification via the backend
-        // For now, we'll implement this properly
-        try {
-          // This would be implemented in a real system with an SMS service
-          // For now, we'll just log that it should happen
-          console.log(`SMS should be sent to ${customer.phone} about batch settlement: ${result.settled_count} sales`);
-        } catch (smsError) {
-          console.error('Failed to send batch settlement SMS:', smsError);
-        }
+        console.log(`Batch settlement SMS automatically sent by backend to ${customer.name} (${customer.phone}) for ${result.settled_count} sales`);
       }
       
       if (result.failed_sales.length > 0) {
@@ -596,7 +587,7 @@ export function PendingSalesManagement() {
                 <button
                   onClick={handleBatchSettle}
                   disabled={loading}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
+                  className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors disabled:opacity-50 flex items-center space-x-2"
                 >
                   <CheckCircle2 size={16} />
                   <span>Settle Selected ({selectedSales.size})</span>

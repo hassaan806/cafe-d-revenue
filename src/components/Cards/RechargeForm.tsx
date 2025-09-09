@@ -187,7 +187,7 @@ export function RechargeForm({ isOpen, onClose, onRecharge, customer }: Recharge
                type="button"
                onClick={handleSubmit}
                disabled={amount <= 0 || isSubmitting}
-               className="flex-1 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+               className="flex-1 px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
              >
                {isSubmitting && <Loader2 size={16} className="animate-spin" />}
                <DollarSign size={16} />

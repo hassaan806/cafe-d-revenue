@@ -13,3 +13,5 @@ class Customer(Base):
     balance = Column(Float, default=0.0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    # Add card_discount field with proper default
+    card_discount = Column(Float, default=0.0, nullable=False)

@@ -12,9 +12,13 @@
    ```bash
    pip install -r requirements.txt
    ```
-4. Run the development server:
+4. Run database migrations:
    ```bash
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   python migrations/add_card_discount_column.py
+   ```
+5. Run the development server:
+   ```bash
+   python start_server.py
    ```
 
 ## API Documentation
@@ -33,6 +37,20 @@ ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
 
+## New Features
+
+### Card Discount System
+- Customers can now have a discount percentage applied to their card
+- When making card payments, the discount is automatically applied
+- The discounted amount is deducted from the customer's card balance
+- SMS notifications include discount information
+
+### Fixes and Improvements
+- Fixed customer data fetching integration between frontend and backend
+- Improved card management API with proper validation
+- Enhanced type safety for card_discount field
+- Added database migration script for card_discount column
+
 ## Project Structure
 
 ```
@@ -41,9 +59,10 @@ backend/
 │   ├── api/            # API routes
 │   ├── core/           # Core configuration
 │   ├── db/            # Database configuration
-│   ├── models/        # Database models
-│   ├── services/      # Business logic
-│   └── main.py        # FastAPI app entry point
+│   ├── models/         # Database models
+│   ├── services/       # Business logic
+│   └── main.py         # FastAPI app entry point
+├── migrations/         # Database migration scripts
 ├── requirements.txt
 └── README.md
 ```

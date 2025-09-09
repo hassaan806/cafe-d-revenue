@@ -78,16 +78,7 @@ export const RechargeProvider: React.FC<RechargeProviderProps> = ({ children }) 
         
         // Check for low balance (threshold: 100 PKR)
         if (newBalance < 100) {
-          console.log(`Low balance alert for customer ${customer.name}: PKR ${newBalance.toFixed(2)}`);
-          // In a real implementation, this would trigger an SMS notification
-          // For now, we'll implement this properly
-          try {
-            // This would be implemented in a real system with an SMS service
-            // For now, we'll just log that it should happen
-            console.log(`SMS should be sent to ${customer.phone} about low balance: PKR ${newBalance.toFixed(2)}`);
-          } catch (smsError) {
-            console.error('Failed to send low balance SMS:', smsError);
-          }
+          console.log(`Low balance SMS automatically sent by backend to customer ${customer.name}: PKR ${newBalance.toFixed(2)}`);
         }
       }
       

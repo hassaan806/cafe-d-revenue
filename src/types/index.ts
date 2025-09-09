@@ -57,6 +57,8 @@ export interface Customer {
   balance: number;
   created_at: string;
   updated_at: string;
+  // New field for card discount with proper typing
+  card_discount: number;
   // Legacy fields for backward compatibility
   address?: string;
   cardRefId?: string;

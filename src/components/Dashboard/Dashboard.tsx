@@ -170,7 +170,7 @@ export function Dashboard({ onViewChange }: DashboardProps) {
               <>
                 <button 
                   onClick={() => onViewChange('products')}
-                  className="flex items-center space-x-2 bg-slate-600 text-white px-4 py-3 rounded-lg hover:bg-slate-700 transition-colors"
+                  className="flex items-center space-x-2 bg-slate-700 text-white px-4 py-3 rounded-lg hover:bg-slate-600 transition-colors"
                 >
                   <Package size={16} />
                   <span className="text-sm">Add Product</span>

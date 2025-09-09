@@ -160,7 +160,7 @@ export function ProductManagement() {
               setShowCategoryForm(true);
               setCategoryName('');
             }}
-            className="bg-slate-600 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition-colors flex items-center space-x-2"
+            className="bg-slate-700 text-white px-4 py-2 rounded-lg hover:bg-slate-600 transition-colors flex items-center space-x-2"
           >
             <Tag size={20} />
             <span>Add Category</span>
@@ -488,7 +488,7 @@ export function ProductManagement() {
                   type="button"
                   onClick={handleAddCategory}
                   disabled={isSubmittingCategory}
-                  className="flex-1 bg-slate-600 text-white py-2 px-4 rounded-lg hover:bg-slate-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="flex-1 bg-slate-700 text-white py-2 px-4 rounded-lg hover:bg-slate-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
                   {isSubmittingCategory ? (
                     <>

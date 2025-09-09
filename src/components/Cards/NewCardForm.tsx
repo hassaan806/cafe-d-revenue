@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, CreditCard, Wifi } from 'lucide-react';
+import { X, User, CreditCard, Wifi, Percent } from 'lucide-react';
 import { Customer } from '../../types';
 
 interface NewCardFormProps {
@@ -14,7 +14,8 @@ export function NewCardForm({ isOpen, onClose, onSave, existingCustomers }: NewC
     name: '',
     phone: '',
     cardRefId: '',
-    rfId: ''
+    rfId: '',
+    card_discount: 0 // Add card discount field with proper default
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -25,7 +26,8 @@ export function NewCardForm({ isOpen, onClose, onSave, existingCustomers }: NewC
         name: '',
         phone: '',
         cardRefId: '',
-        rfId: ''
+        rfId: '',
+        card_discount: 0 // Reset discount to 0 with proper default
       });
       setErrors({});
     }
@@ -54,6 +56,11 @@ export function NewCardForm({ isOpen, onClose, onSave, existingCustomers }: NewC
       newErrors.rfId = 'This RF ID already exists';
     }
 
+    // Validate discount range
+    if (formData.card_discount < 0 || formData.card_discount > 100) {
+      newErrors.card_discount = 'Discount must be between 0 and 100';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -67,6 +74,7 @@ export function NewCardForm({ isOpen, onClose, onSave, existingCustomers }: NewC
         phone: formData.phone.trim(),
         cardRefId: formData.cardRefId.trim(),
         balance: 0, // Always 0 for new cards
+        card_discount: formData.card_discount, // Include discount in customer data
         // Add RF ID to the customer data if provided
         ...(formData.rfId.trim() && { rfId: formData.rfId.trim() })
       } as any);
@@ -76,7 +84,8 @@ export function NewCardForm({ isOpen, onClose, onSave, existingCustomers }: NewC
         name: '',
         phone: '',
         cardRefId: '',
-        rfId: ''
+        rfId: '',
+        card_discount: 0
       });
       setErrors({});
       onClose();
@@ -105,7 +114,13 @@ export function NewCardForm({ isOpen, onClose, onSave, existingCustomers }: NewC
       processedValue = formatPhoneNumber(value);
     }
     
-    setFormData(prev => ({ ...prev, [field]: processedValue }));
+    // Handle numeric input for discount
+    if (field === 'card_discount') {
+      const numValue = parseFloat(value) || 0;
+      setFormData(prev => ({ ...prev, [field]: numValue }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: processedValue }));
+    }
     
     // Clear error when user starts typing
     if (errors[field]) {
@@ -201,6 +216,26 @@ export function NewCardForm({ isOpen, onClose, onSave, existingCustomers }: NewC
             {errors.rfId && <p className="text-red-500 text-sm mt-1">{errors.rfId}</p>}
           </div>
 
+          {/* Card Discount Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Percent className="inline w-4 h-4 mr-2" />
+              Card Discount (%)
+            </label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              value={formData.card_discount}
+              onChange={(e) => handleInputChange('card_discount', e.target.value)}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent ${
+                errors.card_discount ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Enter discount percentage (0-100)"
+            />
+            {errors.card_discount && <p className="text-red-500 text-sm mt-1">{errors.card_discount}</p>}
+          </div>
 
           {/* Form Actions */}
           <div className="flex space-x-3 pt-4">

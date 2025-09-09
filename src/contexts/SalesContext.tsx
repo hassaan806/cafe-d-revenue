@@ -124,16 +124,7 @@ export const SalesProvider: React.FC<SalesProviderProps> = ({ children }) => {
       if (saleData.payment_method === 'card' && saleData.customer_id) {
         const customer = customers.find(c => c.id === saleData.customer_id);
         if (customer) {
-          console.log(`Sending payment SMS to ${customer.name} (${customer.phone}) for PKR ${apiSale.total_price.toFixed(2)}`);
-          // In a real implementation, this would trigger an SMS notification
-          // For now, we'll implement this properly
-          try {
-            // This would be implemented in a real system with an SMS service
-            // For now, we'll just log that it should happen
-            console.log(`SMS should be sent to ${customer.phone} about payment: PKR ${apiSale.total_price.toFixed(2)}`);
-          } catch (smsError) {
-            console.error('Failed to send payment SMS:', smsError);
-          }
+          console.log(`Payment SMS automatically sent by backend to ${customer.name} (${customer.phone}) for PKR ${apiSale.total_price.toFixed(2)}`);
         }
       }
     } catch (err: any) {
@@ -163,16 +154,7 @@ export const SalesProvider: React.FC<SalesProviderProps> = ({ children }) => {
       if (settleData.payment_method === 'card' && settleData.customer_id) {
         const customer = customers.find(c => c.id === settleData.customer_id);
         if (customer) {
-          console.log(`Sending settlement SMS to ${customer.name} (${customer.phone}) for sale #${saleId}`);
-          // In a real implementation, this would trigger an SMS notification
-          // For now, we'll implement this properly
-          try {
-            // This would be implemented in a real system with an SMS service
-            // For now, we'll just log that it should happen
-            console.log(`SMS should be sent to ${customer.phone} about settlement: Sale #${saleId}`);
-          } catch (smsError) {
-            console.error('Failed to send settlement SMS:', smsError);
-          }
+          console.log(`Settlement SMS automatically sent by backend to ${customer.name} (${customer.phone}) for sale #${saleId}`);
         }
       }
     } catch (err: any) {

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from typing import List, Optional
 
 from ..db.database import get_db
@@ -16,6 +16,18 @@ class CustomerCreate(BaseModel):
     rfid_no: str
     card_number: str
     balance: float = 0.0
+    # Add card_discount field with proper default and validation
+    card_discount: float = 0.0
+    
+    class Config:
+        # Ensure card_discount has a minimum value of 0
+        @validator('card_discount')
+        def validate_card_discount(cls, v):
+            if v < 0:
+                raise ValueError('Card discount cannot be negative')
+            if v > 100:
+                raise ValueError('Card discount cannot be greater than 100')
+            return v
 
 class CustomerUpdate(BaseModel):
     name: Optional[str] = None
@@ -23,6 +35,19 @@ class CustomerUpdate(BaseModel):
     rfid_no: Optional[str] = None
     card_number: Optional[str] = None
     balance: Optional[float] = None
+    # Add card_discount field with proper validation
+    card_discount: Optional[float] = None
+    
+    class Config:
+        # Ensure card_discount has a minimum value of 0
+        @validator('card_discount')
+        def validate_card_discount(cls, v):
+            if v is not None:
+                if v < 0:
+                    raise ValueError('Card discount cannot be negative')
+                if v > 100:
+                    raise ValueError('Card discount cannot be greater than 100')
+            return v
 
 class CustomerResponse(BaseModel):
     id: int
@@ -33,6 +58,8 @@ class CustomerResponse(BaseModel):
     balance: float
     created_at: str
     updated_at: Optional[str] = None
+    # Add card_discount field with proper default
+    card_discount: float = 0.0
 
     class Config:
         from_attributes = True
@@ -81,7 +108,9 @@ async def get_customers(
             card_number=cust.card_number,
             balance=cust.balance,
             created_at=cust.created_at.isoformat() if cust.created_at else "",
-            updated_at=cust.updated_at.isoformat() if cust.updated_at else None
+            updated_at=cust.updated_at.isoformat() if cust.updated_at else None,
+            # Add card_discount field
+            card_discount=cust.card_discount
         )
         for cust in customers
     ]
@@ -105,7 +134,9 @@ async def get_customer(
         card_number=customer.card_number,
         balance=customer.balance,
         created_at=customer.created_at.isoformat() if customer.created_at else "",
-        updated_at=customer.updated_at.isoformat() if customer.updated_at else None
+        updated_at=customer.updated_at.isoformat() if customer.updated_at else None,
+        # Add card_discount field
+        card_discount=customer.card_discount
     )
 
 @router.post("/", response_model=CustomerResponse, status_code=status.HTTP_201_CREATED)
@@ -143,7 +174,9 @@ async def create_customer(
         phone=customer.phone,
         rfid_no=customer.rfid_no,
         card_number=customer.card_number,
-        balance=customer.balance
+        balance=customer.balance,
+        # Add card_discount field
+        card_discount=customer.card_discount
     )
     db.add(db_customer)
     db.commit()
@@ -164,7 +197,9 @@ async def create_customer(
         card_number=db_customer.card_number,
         balance=db_customer.balance,
         created_at=db_customer.created_at.isoformat() if db_customer.created_at else "",
-        updated_at=db_customer.updated_at.isoformat() if db_customer.updated_at else None
+        updated_at=db_customer.updated_at.isoformat() if db_customer.updated_at else None,
+        # Add card_discount field
+        card_discount=db_customer.card_discount
     )
 
 @router.put("/{customer_id}", response_model=CustomerResponse)
@@ -220,6 +255,9 @@ async def update_customer(
         customer.card_number = customer_update.card_number
     if customer_update.balance is not None:
         customer.balance = customer_update.balance
+    # Add card_discount field update
+    if customer_update.card_discount is not None:
+        customer.card_discount = customer_update.card_discount
     
     db.commit()
     db.refresh(customer)
@@ -236,7 +274,9 @@ async def update_customer(
         card_number=customer.card_number,
         balance=customer.balance,
         created_at=customer.created_at.isoformat() if customer.created_at else "",
-        updated_at=customer.updated_at.isoformat() if customer.updated_at else None
+        updated_at=customer.updated_at.isoformat() if customer.updated_at else None,
+        # Add card_discount field
+        card_discount=customer.card_discount
     )
 
 @router.delete("/{customer_id}")
@@ -274,7 +314,9 @@ async def get_customer_by_card(
         card_number=customer.card_number,
         balance=customer.balance,
         created_at=customer.created_at.isoformat() if customer.created_at else "",
-        updated_at=customer.updated_at.isoformat() if customer.updated_at else None
+        updated_at=customer.updated_at.isoformat() if customer.updated_at else None,
+        # Add card_discount field
+        card_discount=customer.card_discount
     )
 
 @router.get("/search/by-rfid/{rfid_no}", response_model=CustomerResponse)
@@ -296,5 +338,7 @@ async def get_customer_by_rfid(
         card_number=customer.card_number,
         balance=customer.balance,
         created_at=customer.created_at.isoformat() if customer.created_at else "",
-        updated_at=customer.updated_at.isoformat() if customer.updated_at else None
+        updated_at=customer.updated_at.isoformat() if customer.updated_at else None,
+        # Add card_discount field
+        card_discount=customer.card_discount
     )

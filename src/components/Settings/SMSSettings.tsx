@@ -261,7 +261,7 @@ export function SMSSettings() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors font-medium disabled:opacity-50 flex items-center space-x-2"
+              className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors font-medium disabled:opacity-50 flex items-center space-x-2"
             >
               {saving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
               <span>{saving ? 'Saving...' : 'Save Settings'}</span>

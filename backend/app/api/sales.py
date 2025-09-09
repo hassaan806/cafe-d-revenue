@@ -209,13 +209,21 @@ async def create_sale(
         if sale.payment_method == "card":
             if not customer:
                 raise HTTPException(status_code=400, detail="Customer is required for card payments")
-            if customer.balance < total_price:
+            
+            # Calculate discounted price if customer has a discount
+            discounted_price = total_price
+            if customer.card_discount and customer.card_discount > 0:
+                discount_amount = total_price * (customer.card_discount / 100)
+                discounted_price = total_price - discount_amount
+                print(f"💳 Applying {customer.card_discount}% discount: PKR {total_price:.2f} → PKR {discounted_price:.2f}")
+            
+            if customer.balance < discounted_price:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Insufficient balance. Customer balance: {customer.balance}, Sale total: {total_price}"
+                    detail=f"Insufficient balance. Customer balance: {customer.balance}, Sale total: {discounted_price}"
                 )
-            # Deduct from customer balance
-            customer.balance -= total_price
+            # Deduct discounted amount from customer balance
+            customer.balance -= discounted_price
         
         # Create sale record with enhanced data
         db_sale = Sale(
@@ -239,8 +247,16 @@ async def create_sale(
         if sale.payment_method == "card" and customer:
             try:
                 items_text = format_items_for_sms(sale_items, products)
-                # Improved bank-style SMS format
-                message = f"DEBIT\nCafe D Revenue\nPKR {total_price:.2f}\nBal: PKR {customer.balance:.2f}\n{items_text}"
+                # Calculate discounted price for SMS
+                discounted_price = total_price
+                discount_info = ""
+                if customer.card_discount and customer.card_discount > 0:
+                    discount_amount = total_price * (customer.card_discount / 100)
+                    discounted_price = total_price - discount_amount
+                    discount_info = f"\nDisc: {customer.card_discount}% (-PKR {discount_amount:.2f})"
+                
+                # Improved bank-style SMS format with discount information
+                message = f"DEBIT\nCafe D Revenue\nPKR {total_price:.2f}{discount_info}\nBal: PKR {customer.balance:.2f}\n{items_text}"
                 sms_service.send_sms(customer.phone, message)
             except Exception as e:
                 print(f"Failed to send payment SMS: {str(e)}")
@@ -352,15 +368,23 @@ async def settle_sale(
         if settle_data.payment_method == "card":
             if not customer:
                 raise HTTPException(status_code=400, detail="Customer is required for card payments")
-            if customer.balance < sale.total_price:
+            
+            # Calculate discounted price if customer has a discount
+            discounted_price = sale.total_price
+            if customer.card_discount and customer.card_discount > 0:
+                discount_amount = sale.total_price * (customer.card_discount / 100)
+                discounted_price = sale.total_price - discount_amount
+                print(f"💳 Applying {customer.card_discount}% discount: PKR {sale.total_price:.2f} → PKR {discounted_price:.2f}")
+            
+            if customer.balance < discounted_price:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Insufficient balance. Customer balance: PKR {customer.balance:.2f}, Sale total: PKR {sale.total_price:.2f}. Shortfall: PKR {sale.total_price - customer.balance:.2f}"
+                    detail=f"Insufficient balance. Customer balance: PKR {customer.balance:.2f}, Sale total: PKR {discounted_price:.2f}. Shortfall: PKR {discounted_price - customer.balance:.2f}"
                 )
             
-            # Deduct from customer balance
-            customer.balance -= sale.total_price
-            print(f"💳 Card payment: Deducted PKR {sale.total_price:.2f} from customer #{customer.id}. New balance: PKR {customer.balance:.2f}")
+            # Deduct discounted amount from customer balance
+            customer.balance -= discounted_price
+            print(f"💳 Card payment: Deducted PKR {discounted_price:.2f} from customer #{customer.id}. New balance: PKR {customer.balance:.2f}")
         
         # Update sale with settlement information
         sale.payment_method = settle_data.payment_method
@@ -391,11 +415,20 @@ async def settle_sale(
                 product_ids = [item["product_id"] for item in sale.items]
                 products = db.query(Product).filter(Product.id.in_(product_ids)).all()
                 items_text = format_items_for_sms(sale.items, products)
+                
+                # Calculate discounted price for SMS
+                discounted_price = sale.total_price
+                discount_info = ""
+                if customer.card_discount and customer.card_discount > 0:
+                    discount_amount = sale.total_price * (customer.card_discount / 100)
+                    discounted_price = sale.total_price - discount_amount
+                    discount_info = f"\nDisc: {customer.card_discount}% (-PKR {discount_amount:.2f})"
+                
                 # Improved bank-style SMS format
-                message = f"DEBIT\nCafe D Revenue\nBill #{sale_id} Settled\nPKR {sale.total_price:.2f}\nBal: PKR {customer.balance:.2f}\n{items_text}"
+                message = f"DEBIT\nCafe D Revenue\nBill #{sale_id} Settled\nPKR {sale.total_price:.2f}{discount_info}\nBal: PKR {customer.balance:.2f}\n{items_text}"
                 sms_service.send_sms(customer.phone, message)
             except Exception as e:
-                print(f"Failed to send settlement SMS: {str(e)}")
+                print(f"Failed to send batch settlement SMS: {str(e)}")
         
         return SaleResponse(
             id=sale.id,
@@ -464,25 +497,34 @@ async def batch_settle_sales(
                 customer_id = sale.customer_id
                 if customer_id not in customer_balances:
                     customer = db.query(Customer).filter(Customer.id == customer_id).first()
-                    if customer:
-                        customer_balances[customer_id] = customer.balance
-                        customer_required[customer_id] = 0
+                    if not customer:
+                        failed_sales.append({"sale_id": sale_id, "error": "Customer not found"})
+                        continue
+                    
+                    # Store customer and their current balance
+                    customer_balances[customer_id] = customer.balance
+                    customer_required[customer_id] = customer
                 
-                if customer_id in customer_required:
-                    customer_required[customer_id] += sale.total_price
-        
-        # Check if any customer has insufficient balance for all their sales
-        for customer_id, required in customer_required.items():
-            if customer_balances.get(customer_id, 0) < required:
-                balance = customer_balances.get(customer_id, 0)
-                # Fail all sales for this customer
-                for sale_id in batch_request.sale_ids:
-                    sale = db.query(Sale).filter(Sale.id == sale_id).first()
-                    if sale and sale.customer_id == customer_id and not sale.is_settled:
-                        failed_sales.append({
-                            "sale_id": sale_id, 
-                            "error": f"Insufficient balance for customer #{customer_id}. Balance: PKR {balance:.2f}, Total required: PKR {required:.2f}"
-                        })
+                # Calculate discounted price if customer has a discount
+                discounted_price = sale.total_price
+                customer = customer_required[customer_id]
+                if customer.card_discount and customer.card_discount > 0:
+                    discount_amount = sale.total_price * (customer.card_discount / 100)
+                    discounted_price = sale.total_price - discount_amount
+                    print(f"💳 Applying {customer.card_discount}% discount: PKR {sale.total_price:.2f} → PKR {discounted_price:.2f}")
+                
+                # Check if customer has sufficient balance
+                if customer_balances[customer_id] < discounted_price:
+                    failed_sales.append({
+                        "sale_id": sale_id, 
+                        "error": f"Insufficient balance. Customer balance: PKR {customer_balances[customer_id]:.2f}, Sale total: PKR {discounted_price:.2f}"
+                    })
+                    continue
+                
+                # Deduct from customer balance
+                customer_balances[customer_id] -= discounted_price
+                total_settled_amount += discounted_price
+                print(f"💳 Card payment: Deducted PKR {discounted_price:.2f} from customer #{customer_id}. New balance: PKR {customer_balances[customer_id]:.2f}")
     
     # Process each sale
     for sale_id in batch_request.sale_ids:
@@ -556,13 +598,25 @@ async def batch_settle_sales(
                     if sale.customer_id:
                         customer = db.query(Customer).filter(Customer.id == sale.customer_id).first()
                         if customer:
+                            # Update customer balance in database
+                            customer.balance = customer_balances[sale.customer_id]
+                            
                             try:
                                 # Get products for SMS formatting
                                 product_ids = [item["product_id"] for item in sale.items]
                                 products = db.query(Product).filter(Product.id.in_(product_ids)).all()
                                 items_text = format_items_for_sms(sale.items, products)
+                                
+                                # Calculate discounted price for SMS
+                                discounted_price = sale.total_price
+                                discount_info = ""
+                                if customer.card_discount and customer.card_discount > 0:
+                                    discount_amount = sale.total_price * (customer.card_discount / 100)
+                                    discounted_price = sale.total_price - discount_amount
+                                    discount_info = f"\nDisc: {customer.card_discount}% (-PKR {discount_amount:.2f})"
+                                
                                 # Improved bank-style SMS format
-                                message = f"DEBIT\nCafe D Revenue\nBill #{sale.id} Settled\nPKR {sale.total_price:.2f}\nBal: PKR {customer.balance:.2f}\n{items_text}"
+                                message = f"DEBIT\nCafe D Revenue\nBill #{sale.id} Settled\nPKR {sale.total_price:.2f}{discount_info}\nBal: PKR {customer.balance:.2f}\n{items_text}"
                                 sms_service.send_sms(customer.phone, message)
                             except Exception as e:
                                 print(f"Failed to send batch settlement SMS: {str(e)}")

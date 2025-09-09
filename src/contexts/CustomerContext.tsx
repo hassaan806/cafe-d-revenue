@@ -39,18 +39,22 @@ export const CustomerProvider: React.FC<CustomerProviderProps> = ({ children }) 
       cardRefId: apiCustomer.card_number || '',
       rfId: apiCustomer.rfid_no || '',
       createdAt: apiCustomer.created_at ? new Date(apiCustomer.created_at) : new Date(),
-      address: undefined // Not provided by API
+      address: undefined, // Not provided by API
+      // Handle discount field with proper default value
+      card_discount: typeof apiCustomer.card_discount === 'number' ? apiCustomer.card_discount : 0
     };
   };
 
   // Convert app customer to API format
-  const convertAppCustomerToApiCustomer = (appCustomer: any) => {
+  const convertAppCustomerToApiCustomer = (appCustomer: Customer): any => {
     return {
       name: appCustomer.name,
       phone: appCustomer.phone,
       rfid_no: appCustomer.rfId || appCustomer.rfid_no || '',
       card_number: appCustomer.cardRefId || appCustomer.card_number || '',
-      balance: appCustomer.balance || 0
+      balance: appCustomer.balance || 0,
+      // Always include card_discount field
+      card_discount: typeof appCustomer.card_discount === 'number' ? appCustomer.card_discount : 0
     };
   };
 

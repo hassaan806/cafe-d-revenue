@@ -10,6 +10,8 @@ export interface Customer {
   balance: number;
   created_at: string;
   updated_at: string;
+  // New field for card discount with proper typing
+  card_discount: number;
 }
 
 export interface CreateCustomerRequest {
@@ -18,6 +20,8 @@ export interface CreateCustomerRequest {
   rfid_no: string;
   card_number: string;
   balance: number;
+  // New field for card discount with proper typing
+  card_discount: number;
 }
 
 export interface UpdateCustomerRequest {
@@ -26,6 +30,8 @@ export interface UpdateCustomerRequest {
   rfid_no?: string;
   card_number?: string;
   balance?: number;
+  // New field for card discount with proper typing
+  card_discount?: number;
 }
 
 export const customerService = {

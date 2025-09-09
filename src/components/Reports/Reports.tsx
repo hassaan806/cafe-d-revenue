@@ -21,14 +21,48 @@ import {
   CreditCard,
   AlertCircle,
   CheckCircle,
-  Clock
+  Clock,
+  Filter,
+  Search,
+  Eye
 } from 'lucide-react';
+
+// Add Chart.js for visualizations
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  PointElement,
+  LineElement,
+  LineController
+} from 'chart.js';
+import { Bar, Pie, Line } from 'react-chartjs-2';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  PointElement,
+  LineElement,
+  LineController
+);
 
 export function Reports() {
   const { sales, loading, error } = useSales();
   const { products } = useProducts();
   const { customers } = useCustomers();
-  const [dateRange, setDateRange] = useState('today');
+  // Change default date range to 'week'
+  const [dateRange, setDateRange] = useState('week');
   const [selectedReport, setSelectedReport] = useState('overview');
   const [reportData, setReportData] = useState<any>(null);
   const [reportLoading, setReportLoading] = useState(false);
@@ -39,6 +73,13 @@ export function Reports() {
     startDate: '',
     endDate: ''
   });
+  
+  // New state for sales records
+  const [salesRecords, setSalesRecords] = useState<any[]>([]);
+  const [filteredSalesRecords, setFilteredSalesRecords] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('all');
+  const [sortConfig, setSortConfig] = useState<{key: string, direction: 'asc' | 'desc'} | null>(null);
   
   // Professional report colors and styles
   const reportTheme = {
@@ -137,6 +178,73 @@ export function Reports() {
   const topProducts = Object.entries(productSales)
     .sort(([,a], [,b]) => b.revenue - a.revenue)
     .slice(0, 5);
+
+  // Chart data
+  const paymentMethodChartData = {
+    labels: Object.keys(paymentBreakdown),
+    datasets: [
+      {
+        label: 'Payment Methods',
+        data: Object.values(paymentBreakdown).map(data => data.amount),
+        backgroundColor: [
+          'rgba(54, 162, 235, 0.8)',
+          'rgba(255, 99, 132, 0.8)',
+          'rgba(255, 206, 86, 0.8)',
+          'rgba(75, 192, 192, 0.8)',
+          'rgba(153, 102, 255, 0.8)',
+        ],
+        borderColor: [
+          'rgba(54, 162, 235, 1)',
+          'rgba(255, 99, 132, 1)',
+          'rgba(255, 206, 86, 1)',
+          'rgba(75, 192, 192, 1)',
+          'rgba(153, 102, 255, 1)',
+        ],
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const topProductsChartData = {
+    labels: topProducts.map(([name]) => name),
+    datasets: [
+      {
+        label: 'Revenue',
+        data: topProducts.map(([, data]) => data.revenue),
+        backgroundColor: 'rgba(54, 162, 235, 0.8)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  // Generate dynamic daily sales data based on actual sales
+  const generateDailySalesData = () => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const salesByDay = Array(7).fill(0);
+    
+    filteredSales.forEach(sale => {
+      const saleDate = new Date(sale.timestamp || sale.createdAt || new Date());
+      const dayIndex = saleDate.getDay();
+      salesByDay[dayIndex] += sale.total || sale.total_price || 0;
+    });
+    
+    return {
+      labels: days,
+      datasets: [
+        {
+          label: 'Daily Sales',
+          data: salesByDay,
+          fill: false,
+          borderColor: 'rgb(75, 192, 192)',
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          tension: 0.1,
+        },
+      ],
+    };
+  };
+
+  const dailySalesData = generateDailySalesData();
 
   // Export functions
   const exportToCSV = (data: any[], filename: string) => {
@@ -740,9 +848,96 @@ export function Reports() {
   // Handle report selection
   const handleReportSelect = (reportType: string) => {
     setSelectedReport(reportType);
-    if (reportType !== 'overview') {
+    if (reportType !== 'overview' && reportType !== 'sales_records') {
       fetchReport(reportType);
     }
+  };
+
+  // Initialize sales records
+  useEffect(() => {
+    setSalesRecords(filteredSales);
+    setFilteredSalesRecords(filteredSales);
+  }, [filteredSales]);
+
+  // Filter sales records based on search and payment method
+  useEffect(() => {
+    let result = [...salesRecords];
+    
+    // Apply search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(sale => {
+        const customer = sale.customer_id ? customers.find(c => c.id === sale.customer_id) : null;
+        const customerName = customer ? customer.name.toLowerCase() : '';
+        const invoiceNumber = sale.invoiceNumber ? sale.invoiceNumber.toLowerCase() : '';
+        const items = sale.items && Array.isArray(sale.items) 
+          ? sale.items.map((item: any) => extractProductName(item, products)).join(' ').toLowerCase()
+          : '';
+        
+        return (
+          customerName.includes(term) ||
+          invoiceNumber.includes(term) ||
+          items.includes(term) ||
+          (sale.total || sale.total_price || 0).toString().includes(term)
+        );
+      });
+    }
+    
+    // Apply payment method filter
+    if (selectedPaymentMethod !== 'all') {
+      result = result.filter(sale => 
+        (sale.payment_method || (sale as any).paymentMethod || 'unknown') === selectedPaymentMethod
+      );
+    }
+    
+    // Apply sorting
+    if (sortConfig !== null) {
+      result.sort((a, b) => {
+        let aValue, bValue;
+        
+        switch (sortConfig.key) {
+          case 'date':
+            aValue = new Date(a.timestamp || a.createdAt || new Date()).getTime();
+            bValue = new Date(b.timestamp || b.createdAt || new Date()).getTime();
+            break;
+          case 'customer':
+            const aCustomer = a.customer_id ? customers.find(c => c.id === a.customer_id) : null;
+            const bCustomer = b.customer_id ? customers.find(c => c.id === b.customer_id) : null;
+            aValue = aCustomer ? aCustomer.name : 'Walk-in Customer';
+            bValue = bCustomer ? bCustomer.name : 'Walk-in Customer';
+            break;
+          case 'amount':
+            aValue = a.total || a.total_price || 0;
+            bValue = b.total || b.total_price || 0;
+            break;
+          case 'invoice':
+            aValue = a.invoiceNumber || '';
+            bValue = b.invoiceNumber || '';
+            break;
+          default:
+            return 0;
+        }
+        
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    
+    setFilteredSalesRecords(result);
+  }, [salesRecords, searchTerm, selectedPaymentMethod, sortConfig, customers, products]);
+
+  // Handle sorting
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
   };
 
   const reportStats = [
@@ -818,7 +1013,7 @@ export function Reports() {
             <option value="custom">Custom Range</option>
           </select>
           <button
-            onClick={() => selectedReport !== 'overview' && fetchReport(selectedReport)}
+            onClick={() => selectedReport !== 'overview' && selectedReport !== 'sales_records' && fetchReport(selectedReport)}
             disabled={reportLoading}
             className={`${reportTheme.primary} px-4 py-2 rounded-lg hover:bg-slate-600 transition-colors flex items-center space-x-2 disabled:opacity-50`}
           >
@@ -864,7 +1059,7 @@ export function Reports() {
       {/* Report Type Selection */}
       <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Report Type</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <button
             onClick={() => handleReportSelect('overview')}
             className={`p-4 rounded-lg border transition-colors ${
@@ -875,6 +1070,17 @@ export function Reports() {
           >
             <BarChart3 className="w-6 h-6 mx-auto mb-2" />
             <span className="text-sm font-medium">Overview</span>
+          </button>
+          <button
+            onClick={() => handleReportSelect('sales_records')}
+            className={`p-4 rounded-lg border transition-colors ${
+              selectedReport === 'sales_records'
+                ? 'border-slate-700 bg-slate-50 text-slate-700'
+                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <FileText className="w-6 h-6 mx-auto mb-2" />
+            <span className="text-sm font-medium">Sales Records</span>
           </button>
           <button
             onClick={() => handleReportSelect('sales_by_date')}
@@ -897,17 +1103,6 @@ export function Reports() {
           >
             <Package className="w-6 h-6 mx-auto mb-2" />
             <span className="text-sm font-medium">Sales by Product</span>
-          </button>
-          <button
-            onClick={() => handleReportSelect('sales_by_salesman')}
-            className={`p-4 rounded-lg border transition-colors ${
-              selectedReport === 'sales_by_salesman'
-                ? 'border-slate-700 bg-slate-50 text-slate-700'
-                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <Users className="w-6 h-6 mx-auto mb-2" />
-            <span className="text-sm font-medium">Sales by Salesman</span>
           </button>
           <button
             onClick={() => handleReportSelect('payment_breakdown')}
@@ -951,14 +1146,14 @@ export function Reports() {
                     }));
                     exportToCSV(statsData, 'overview_statistics');
                   }}
-                  className="px-3 py-1 text-xs bg-slate-600 text-white rounded hover:bg-slate-700 transition-colors flex items-center space-x-1"
+                  className="px-3 py-1 text-xs bg-slate-700 text-white rounded hover:bg-slate-600 transition-colors flex items-center space-x-1"
                 >
                   <Download size={12} />
                   <span>CSV</span>
                 </button>
                 <button
                   onClick={exportCurrentReportToPDF}
-                  className="px-3 py-1 text-xs bg-slate-600 text-white rounded hover:bg-slate-700 transition-colors flex items-center space-x-1"
+                  className="px-3 py-1 text-xs bg-slate-700 text-white rounded hover:bg-slate-600 transition-colors flex items-center space-x-1"
                 >
                   <FileText size={12} />
                   <span>Full PDF</span>
@@ -967,7 +1162,7 @@ export function Reports() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {reportStats.map((stat, index) => (
-                <div key={index} className="bg-gray-50 rounded-xl shadow-sm p-6 border border-gray-100">
+                <div key={index} className="bg-gray-50 rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-600">{stat.title}</p>
@@ -979,6 +1174,33 @@ export function Reports() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Charts Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Payment Methods Chart */}
+            <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Methods Distribution</h3>
+              <div className="h-80">
+                <Pie data={paymentMethodChartData} options={{ responsive: true, maintainAspectRatio: false }} />
+              </div>
+            </div>
+
+            {/* Top Products Chart */}
+            <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Selling Products</h3>
+              <div className="h-80">
+                <Bar data={topProductsChartData} options={{ responsive: true, maintainAspectRatio: false }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Daily Sales Trend Chart */}
+          <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Weekly Sales Trend</h3>
+            <div className="h-80">
+              <Line data={dailySalesData} options={{ responsive: true, maintainAspectRatio: false }} />
             </div>
           </div>
 
@@ -1000,7 +1222,7 @@ export function Reports() {
                   }));
                   exportToCSV(paymentData, 'payment_methods');
                 }}
-                className="px-3 py-1 text-xs bg-slate-600 text-white rounded hover:bg-slate-700 transition-colors flex items-center space-x-1"
+                className="px-3 py-1 text-xs bg-slate-700 text-white rounded hover:bg-slate-600 transition-colors flex items-center space-x-1"
               >
                 <Download size={12} />
                 <span>CSV</span>
@@ -1019,7 +1241,7 @@ export function Reports() {
                   `;
                   exportToPDF(content, 'Payment Methods Report');
                 }}
-                className="px-3 py-1 text-xs bg-slate-600 text-white rounded hover:bg-slate-700 transition-colors flex items-center space-x-1"
+                className="px-3 py-1 text-xs bg-slate-700 text-white rounded hover:bg-slate-600 transition-colors flex items-center space-x-1"
               >
                 <FileText size={12} />
                 <span>PDF</span>
@@ -1030,7 +1252,7 @@ export function Reports() {
             {Object.entries(paymentBreakdown).map(([method, data]) => {
               const percentage = totalRevenue > 0 ? (data.amount / totalRevenue * 100) : 0;
               return (
-                <div key={method} className="bg-gray-50 p-4 rounded-lg">
+                <div key={method} className="bg-gray-50 p-4 rounded-lg hover:bg-gray-100 transition-colors">
                   <div className="flex justify-between items-center mb-2">
                     <span className="capitalize font-semibold text-lg">{method}</span>
                     <span className="text-lg font-bold">PKR {data.amount.toLocaleString()}</span>
@@ -1080,7 +1302,7 @@ export function Reports() {
                     }));
                     exportToCSV(customerData, 'top_customers');
                   }}
-                  className="px-3 py-1 text-xs bg-slate-600 text-white rounded hover:bg-slate-700 transition-colors flex items-center space-x-1"
+                  className="px-3 py-1 text-xs bg-slate-700 text-white rounded hover:bg-slate-600 transition-colors flex items-center space-x-1"
                 >
                   <Download size={12} />
                   <span>CSV</span>
@@ -1098,7 +1320,7 @@ export function Reports() {
                     `;
                     exportToPDF(content, 'Top Customers Report');
                   }}
-                  className="px-3 py-1 text-xs bg-slate-600 text-white rounded hover:bg-slate-700 transition-colors flex items-center space-x-1"
+                  className="px-3 py-1 text-xs bg-slate-700 text-white rounded hover:bg-slate-600 transition-colors flex items-center space-x-1"
                 >
                   <FileText size={12} />
                   <span>PDF</span>
@@ -1144,7 +1366,7 @@ export function Reports() {
                     }));
                     exportToCSV(topProductsData, 'top_products');
                   }}
-                  className="px-3 py-1 text-xs bg-slate-600 text-white rounded hover:bg-slate-700 transition-colors flex items-center space-x-1"
+                  className="px-3 py-1 text-xs bg-slate-700 text-white rounded hover:bg-slate-600 transition-colors flex items-center space-x-1"
                 >
                   <Download size={12} />
                   <span>CSV</span>
@@ -1162,7 +1384,7 @@ export function Reports() {
                     `;
                     exportToPDF(content, 'Top Products Report');
                   }}
-                  className="px-3 py-1 text-xs bg-slate-600 text-white rounded hover:bg-slate-700 transition-colors flex items-center space-x-1"
+                  className="px-3 py-1 text-xs bg-slate-700 text-white rounded hover:bg-slate-600 transition-colors flex items-center space-x-1"
                 >
                   <FileText size={12} />
                   <span>PDF</span>
@@ -1204,7 +1426,7 @@ export function Reports() {
                     'Invoice': sale.invoiceNumber,
                     'Customer': customer ? customer.name : 'Walk-in Customer',
                     'Card Number': customer ? (customer.cardRefId || customer.card_number || 'No Card') : 'N/A',
-                    'Items': sale.items && sale.items.length > 0 ? sale.items.map(item => extractProductName(item, products)).join(', ') : 'No items',
+                    'Items': sale.items && sale.items.length > 0 ? sale.items.map((item: any) => extractProductName(item, products)).join(', ') : 'No items',
                     'Payment Method': ((sale.payment_method || (sale as any).paymentMethod) || 'Unknown').toUpperCase(),
                     'Amount': `PKR ${(sale.total || sale.total_price || 0).toLocaleString()}`,
                     'Date': new Date(sale.createdAt || sale.timestamp || new Date()).toLocaleDateString(),
@@ -1213,7 +1435,7 @@ export function Reports() {
                 });
                 exportToCSV(transactionsData, 'recent_transactions');
               }}
-              className="px-3 py-1 text-xs bg-slate-600 text-white rounded hover:bg-slate-700 transition-colors flex items-center space-x-1"
+              className="px-3 py-1 text-xs bg-slate-700 text-white rounded hover:bg-slate-600 transition-colors flex items-center space-x-1"
             >
               <Download size={12} />
               <span>CSV</span>
@@ -1237,7 +1459,7 @@ export function Reports() {
                 `;
                 exportToPDF(content, 'Recent Transactions Report');
               }}
-              className="px-3 py-1 text-xs bg-slate-600 text-white rounded hover:bg-slate-700 transition-colors flex items-center space-x-1"
+              className="px-3 py-1 text-xs bg-slate-700 text-white rounded hover:bg-slate-600 transition-colors flex items-center space-x-1"
             >
               <FileText size={12} />
               <span>PDF</span>
@@ -1297,6 +1519,215 @@ export function Reports() {
         </div>
       </div>
       </>
+    ) : selectedReport === 'sales_records' ? (
+      /* Detailed Sales Records Section */
+      <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900">Detailed Sales Records</h2>
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-500">
+              {getDateRange().startDate} to {getDateRange().endDate}
+            </span>
+            <button
+              onClick={() => {
+                const salesData = filteredSalesRecords.map(sale => {
+                  const customer = sale.customer_id ? customers.find(c => c.id === sale.customer_id) : null;
+                  return {
+                    'Invoice': sale.invoiceNumber,
+                    'Customer': customer ? customer.name : 'Walk-in Customer',
+                    'Card Number': customer ? (customer.cardRefId || customer.card_number || 'No Card') : 'N/A',
+                    'Items': sale.items && sale.items.length > 0 ? sale.items.map((item: any) => extractProductName(item, products)).join(', ') : 'No items',
+                    'Payment Method': ((sale.payment_method || (sale as any).paymentMethod) || 'Unknown').toUpperCase(),
+                    'Amount': `PKR ${(sale.total || sale.total_price || 0).toLocaleString()}`,
+                    'Date': new Date(sale.createdAt || sale.timestamp || new Date()).toLocaleDateString(),
+                    'Time': new Date(sale.createdAt || sale.timestamp || new Date()).toLocaleTimeString()
+                  };
+                });
+                exportToCSV(salesData, 'detailed_sales_records');
+              }}
+              className="px-3 py-1 text-sm bg-slate-700 text-white rounded hover:bg-slate-600 flex items-center space-x-1"
+            >
+              <Download size={12} />
+              <span>Export CSV</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="mb-6 flex flex-col md:flex-row md:items-center md:space-x-4 space-y-4 md:space-y-0">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search by customer, invoice, items, or amount..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center space-x-2">
+            <Filter className="text-gray-400 w-4 h-4" />
+            <select
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+              value={selectedPaymentMethod}
+              onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+            >
+              <option value="all">All Payment Methods</option>
+              <option value="cash">Cash</option>
+              <option value="card">Card</option>
+              <option value="easypaisa">EasyPaisa</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Sales Records Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th 
+                  className="text-left py-3 font-medium text-gray-700 cursor-pointer hover:bg-gray-50"
+                  onClick={() => handleSort('invoice')}
+                >
+                  <div className="flex items-center">
+                    <span>Invoice</span>
+                    {sortConfig?.key === 'invoice' && (
+                      <span className="ml-1">
+                        {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="text-left py-3 font-medium text-gray-700 cursor-pointer hover:bg-gray-50"
+                  onClick={() => handleSort('customer')}
+                >
+                  <div className="flex items-center">
+                    <span>Customer</span>
+                    {sortConfig?.key === 'customer' && (
+                      <span className="ml-1">
+                        {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </div>
+                </th>
+                <th className="text-left py-3 font-medium text-gray-700">Items</th>
+                <th 
+                  className="text-left py-3 font-medium text-gray-700 cursor-pointer hover:bg-gray-50"
+                  onClick={() => handleSort('amount')}
+                >
+                  <div className="flex items-center">
+                    <span>Amount</span>
+                    {sortConfig?.key === 'amount' && (
+                      <span className="ml-1">
+                        {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="text-left py-3 font-medium text-gray-700 cursor-pointer hover:bg-gray-50"
+                  onClick={() => handleSort('date')}
+                >
+                  <div className="flex items-center">
+                    <span>Date & Time</span>
+                    {sortConfig?.key === 'date' && (
+                      <span className="ml-1">
+                        {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </div>
+                </th>
+                <th className="text-left py-3 font-medium text-gray-700">Payment</th>
+                <th className="text-left py-3 font-medium text-gray-700">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredSalesRecords.length > 0 ? (
+                filteredSalesRecords.map((sale) => {
+                  const customer = sale.customer_id ? customers.find(c => c.id === sale.customer_id) : null;
+                  return (
+                    <tr key={sale.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-3 font-medium">{sale.invoiceNumber}</td>
+                      <td className="py-3 text-gray-600">
+                        {customer ? (
+                          <div>
+                            <div className="font-medium text-gray-900">{customer.name}</div>
+                            <div className="text-xs text-gray-500">{customer.cardRefId || customer.card_number || 'No Card'}</div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">Walk-in Customer</span>
+                        )}
+                      </td>
+                      <td className="py-3 text-gray-600 max-w-xs">
+                        <div className="flex flex-wrap gap-1">
+                          {sale.items && sale.items.length > 0 ? (
+                            sale.items.map((item: any, index: number) => (
+                              <span key={index} className="bg-gray-100 px-2 py-1 rounded text-xs">
+                                {extractProductName(item, products)} x{item.quantity}
+                              </span>
+                            ))
+                          ) : (
+                            <span>No items</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 font-semibold">PKR {(sale.total || sale.total_price || 0).toLocaleString()}</td>
+                      <td className="py-3 text-gray-500">
+                        <div>
+                          {new Date(sale.createdAt || sale.timestamp || new Date()).toLocaleDateString()}
+                        </div>
+                        <div className="text-xs">
+                          {new Date(sale.createdAt || sale.timestamp || new Date()).toLocaleTimeString()}
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          (sale.payment_method || (sale as any).paymentMethod) === 'cash' ? 'bg-green-100 text-green-800' :
+                          (sale.payment_method || (sale as any).paymentMethod) === 'card' ? 'bg-blue-100 text-blue-800' :
+                          (sale.payment_method || (sale as any).paymentMethod) === 'easypaisa' ? 'bg-purple-100 text-purple-800' :
+                          'bg-orange-100 text-orange-800'
+                        }`}>
+                          {((sale.payment_method || (sale as any).paymentMethod) || 'Unknown').toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        <button className="text-slate-600 hover:text-slate-900">
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-gray-500">
+                    No sales records found matching your criteria
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="mt-4 flex items-center justify-between">
+          <div className="text-sm text-gray-500">
+            Showing {filteredSalesRecords.length} of {salesRecords.length} records
+          </div>
+          <div className="flex space-x-2">
+            <button className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded disabled:opacity-50">
+              Previous
+            </button>
+            <button className="px-3 py-1 text-sm bg-slate-700 text-white rounded">
+              1
+            </button>
+            <button className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded">
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
     ) : (
         /* API Report Display */
         <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
@@ -1323,7 +1754,7 @@ export function Reports() {
                 <button
                   onClick={exportCurrentReport}
                   disabled={!reportData}
-                  className="px-3 py-1 text-sm bg-slate-600 text-white rounded hover:bg-slate-700 disabled:opacity-50 flex items-center space-x-1"
+                  className="px-3 py-1 text-sm bg-slate-700 text-white rounded hover:bg-slate-600 disabled:opacity-50 flex items-center space-x-1"
                 >
                   <Download size={12} />
                   <span>CSV</span>
@@ -1331,7 +1762,7 @@ export function Reports() {
                 <button
                   onClick={exportCurrentReportToPDF}
                   disabled={!reportData}
-                  className="px-3 py-1 text-sm bg-slate-600 text-white rounded hover:bg-slate-700 disabled:opacity-50 flex items-center space-x-1"
+                  className="px-3 py-1 text-sm bg-slate-700 text-white rounded hover:bg-slate-600 disabled:opacity-50 flex items-center space-x-1"
                 >
                   <FileText size={12} />
                   <span>PDF</span>

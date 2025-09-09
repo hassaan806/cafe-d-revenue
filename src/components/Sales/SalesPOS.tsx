@@ -141,8 +141,12 @@ export function SalesPOS() {
       const customer = customers.find(c => c.id.toString() === selectedCustomer);
       if (customer) {
         const customerBalance = customer.balance || 0;
-        if (customerBalance < total) {
-          showAlert(`Insufficient balance! Customer has PKR ${customerBalance.toFixed(2)} but needs PKR ${total.toFixed(2)}`, 'error');
+        // Calculate discounted price if customer has a discount
+        const discount = customer.card_discount || 0;
+        const discountedTotal = discount > 0 ? total * (1 - discount / 100) : total;
+        
+        if (customerBalance < discountedTotal) {
+          showAlert(`Insufficient balance! Customer has PKR ${customerBalance.toFixed(2)} but needs PKR ${discountedTotal.toFixed(2)}${discount > 0 ? ` (after ${discount}% discount)` : ''}`, 'error');
           return;
         }
       }
@@ -334,6 +338,16 @@ export function SalesPOS() {
           </div>
           
           <div class="total-row">
+            <div class="item-row">
+              <span>Subtotal:</span>
+              <span>PKR ${currentSale.subtotal.toFixed(2)}</span>
+            </div>
+            ${currentSale.customerId && customers.find(c => c.id === parseInt(currentSale.customerId))?.card_discount ? `
+            <div class="item-row">
+              <span>Discount (${customers.find(c => c.id === parseInt(currentSale.customerId))?.card_discount}%):</span>
+              <span>-PKR ${(currentSale.subtotal * (customers.find(c => c.id === parseInt(currentSale.customerId))?.card_discount || 0) / 100).toFixed(2)}</span>
+            </div>
+            ` : ''}
             <div class="item-row">
               <span>Total:</span>
               <span>PKR ${currentSale.total.toFixed(2)}</span>
