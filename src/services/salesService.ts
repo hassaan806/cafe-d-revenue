@@ -43,6 +43,13 @@ export interface BatchSettleResponse {
   failed_sales: { sale_id: number; error: string }[];
 }
 
+// Pending sales summary interface
+export interface PendingSalesSummary {
+  total_pending_amount: number;
+  pending_sales_count: number;
+  sales: number[];
+}
+
 export const salesService = {
   // Get all sales
   async getSales(): Promise<Sale[]> {
@@ -60,7 +67,7 @@ export const salesService = {
     }
   },
 
-  // by id
+  // Get sale by id
   async getSale(saleId: number): Promise<Sale> {
     try {
       console.log('Fetching sale:', saleId);
@@ -76,7 +83,7 @@ export const salesService = {
     }
   },
 
-  // new sale
+  // Create new sale
   async createSale(saleData: CreateSaleRequest): Promise<Sale> {
     try {
       console.log('Creating sale:', saleData);
@@ -92,7 +99,7 @@ export const salesService = {
     }
   },
 
-  //  pending sales
+  // Get pending sales
   async getPendingSales(): Promise<Sale[]> {
     try {
       console.log('Fetching pending sales...');
@@ -108,12 +115,12 @@ export const salesService = {
     }
   },
 
-  //  pending sales summary for  customer
-  async getPendingSalesSummary(customerId?: number): Promise<string> {
+  // Get pending sales summary for a customer
+  async getPendingSalesSummary(customerId?: number): Promise<PendingSalesSummary> {
     try {
       console.log('Fetching pending sales summary for customer:', customerId);
       const url = customerId ? `/sales/pending?customer_id=${customerId}` : '/sales/pending';
-      const response = await api.get<string>(url);
+      const response = await api.get<PendingSalesSummary>(url);
       console.log('Pending sales summary fetched successfully');
       return response.data;
     } catch (error: any) {

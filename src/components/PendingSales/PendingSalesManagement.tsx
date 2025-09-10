@@ -53,6 +53,9 @@ export function PendingSalesManagement() {
       setFilteredSales(sales);
     } catch (err) {
       console.error('Error loading pending sales:', err);
+      // Show error to user
+      setSuccessMessage('Failed to load pending sales. Please try again.');
+      setTimeout(() => setSuccessMessage(''), 3000);
     } finally {
       setLoadingPending(false);
     }
@@ -118,7 +121,7 @@ export function PendingSalesManagement() {
         customer_id: customer ? customer.id : sale.customer_id // Use scanned customer or original customer
       };
 
-      await settleSale(sale.id, settleData);
+      await salesService.settleSale(sale.id, settleData);
       
       // Generate bill data for settled sale
       const customerName = customer ? customer.name : (sale.customer_id ? getCustomerName(sale.customer_id) : 'Walk-in Customer');
@@ -135,11 +138,14 @@ export function PendingSalesManagement() {
       
       // Remove from pending sales
       setPendingSales(prev => prev.filter(s => s.id !== sale.id));
+      setFilteredSales(prev => prev.filter(s => s.id !== sale.id));
       setSuccessMessage(`Sale #${sale.id} settled successfully!`);
       setTimeout(() => setSuccessMessage(''), 3000);
       
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error settling sale:', err);
+      setSuccessMessage(`Error settling sale: ${err.message || 'Unknown error'}`);
+      setTimeout(() => setSuccessMessage(''), 3000);
     } finally {
       setSettlingIds(prev => {
         const newSet = new Set(prev);
@@ -251,6 +257,9 @@ export function PendingSalesManagement() {
       setPendingSales(prev => 
         prev.filter(sale => !result.settled_sales.includes(sale.id))
       );
+      setFilteredSales(prev => 
+        prev.filter(sale => !result.settled_sales.includes(sale.id))
+      );
       
       // Clear selected sales
       setSelectedSales(new Set());
@@ -275,7 +284,8 @@ export function PendingSalesManagement() {
       
     } catch (err: any) {
       console.error('Error in batch settlement:', err);
-      alert(`Batch settlement failed: ${err.message || 'Unknown error'}`);
+      setSuccessMessage(`Batch settlement failed: ${err.message || 'Unknown error'}`);
+      setTimeout(() => setSuccessMessage(''), 3000);
     }
   };
 
@@ -710,6 +720,26 @@ export function PendingSalesManagement() {
                           >
                             <Eye size={16} />
                           </button>
+                          
+                          {/* Settlement Options */}
+                          {paymentMethods.map(method => {
+                            const Icon = method.icon;
+                            return (
+                              <button
+                                key={method.value}
+                                onClick={() => handleSingleSettle(sale, method.value as 'cash' | 'card' | 'easypaisa')}
+                                disabled={settlingIds.has(sale.id)}
+                                className={`p-2 rounded-lg transition-colors ${method.color} ${method.value === 'cash' ? 'bg-green-50 hover:bg-green-100' : method.value === 'card' ? 'bg-blue-50 hover:bg-blue-100' : 'bg-purple-50 hover:bg-purple-100'} disabled:opacity-50 disabled:cursor-not-allowed`}
+                                title={`Settle with ${method.label}`}
+                              >
+                                {settlingIds.has(sale.id) && method.value === 'cash' ? (
+                                  <RefreshCw className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Icon size={16} />
+                                )}
+                              </button>
+                            );
+                          })}
                         </div>
                       </td>
                     </tr>

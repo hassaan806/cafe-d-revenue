@@ -421,48 +421,66 @@ export function Reports() {
     }
 
     try {
-      const data = typeof reportData === 'string' ? JSON.parse(reportData) : reportData;
-      
+      let dataToExport: any[] = [];
+      let filename = '';
+
       switch (selectedReport) {
         case 'sales_by_date':
-          if (data.sales_by_date && data.sales_by_date.length > 0) {
-            exportToCSV(data.sales_by_date, 'sales_by_date_report');
+          if (reportData.sales_by_date && reportData.sales_by_date.length > 0) {
+            dataToExport = reportData.sales_by_date;
+            filename = 'sales_by_date_report';
           }
           break;
         case 'sales_by_product':
-          if (data.products && data.products.length > 0) {
-            exportToCSV(data.products, 'sales_by_product_report');
+          if (reportData.products && reportData.products.length > 0) {
+            dataToExport = reportData.products;
+            filename = 'sales_by_product_report';
           }
           break;
         case 'sales_by_salesman':
           const salesmanData = [];
-          if (data.settled_sales) {
+          if (reportData.settled_sales) {
             salesmanData.push({ 
               Type: 'Settled Sales', 
-              Count: data.settled_sales.count,
-              'Total Amount': `PKR ${data.settled_sales.total_amount?.toLocaleString() || '0'}`,
-              'Average Order Value': `PKR ${data.settled_sales.average_order_value?.toLocaleString() || '0'}`
+              Count: reportData.settled_sales.count,
+              'Total Amount': `PKR ${reportData.settled_sales.total_amount?.toLocaleString() || '0'}`,
+              'Average Order Value': `PKR ${reportData.settled_sales.average_order_value?.toLocaleString() || '0'}`
             });
           }
-          if (data.pending_sales) {
+          if (reportData.pending_sales) {
             salesmanData.push({ 
               Type: 'Pending Sales', 
-              Count: data.pending_sales.count,
-              'Total Amount': `PKR ${data.pending_sales.total_amount?.toLocaleString() || '0'}`,
+              Count: reportData.pending_sales.count,
+              'Total Amount': `PKR ${reportData.pending_sales.total_amount?.toLocaleString() || '0'}`,
               'Average Order Value': 'N/A'
             });
           }
-          if (salesmanData.length > 0) {
-            exportToCSV(salesmanData, 'sales_summary_report');
+          if (reportData.overall) {
+            salesmanData.push({ 
+              Type: 'Overall', 
+              Count: reportData.overall.total_transactions,
+              'Total Amount': `PKR ${reportData.overall.total_gross_sales?.toLocaleString() || '0'}`,
+              'Settlement Rate': `${reportData.overall.settlement_rate?.toFixed(1) || '0'}%`
+            });
           }
+          dataToExport = salesmanData;
+          filename = 'sales_summary_report';
           break;
         case 'payment_breakdown':
-          if (data.payment_methods && data.payment_methods.length > 0) {
-            exportToCSV(data.payment_methods, 'payment_breakdown_report');
+          if (reportData.payment_methods && reportData.payment_methods.length > 0) {
+            dataToExport = reportData.payment_methods;
+            filename = 'payment_breakdown_report';
           }
           break;
         default:
           alert('Export not available for this report type');
+          return;
+      }
+
+      if (dataToExport.length > 0) {
+        exportToCSV(dataToExport, filename);
+      } else {
+        alert('No data available to export for this report');
       }
     } catch (error) {
       console.error('Export error:', error);
@@ -535,21 +553,19 @@ export function Reports() {
     if (!reportData) return null;
     
     try {
-      const data = typeof reportData === 'string' ? JSON.parse(reportData) : reportData;
-      
       switch (selectedReport) {
         case 'sales_by_date':
-          return renderSalesByDateReport(data);
+          return renderSalesByDateReport(reportData);
         case 'sales_by_product':
-          return renderSalesByProductReport(data);
+          return renderSalesByProductReport(reportData);
         case 'sales_by_salesman':
-          return renderSalesSummaryReport(data);
+          return renderSalesSummaryReport(reportData);
         case 'payment_breakdown':
-          return renderPaymentBreakdownReport(data);
+          return renderPaymentBreakdownReport(reportData);
         default:
           return (
             <pre className="bg-gray-100 p-4 rounded text-sm overflow-x-auto">
-              {typeof reportData === 'string' ? reportData : JSON.stringify(reportData, null, 2)}
+              {JSON.stringify(reportData, null, 2)}
             </pre>
           );
       }
@@ -559,7 +575,7 @@ export function Reports() {
           <p>Error parsing report data: {error instanceof Error ? error.message : 'Unknown error'}</p>
           <details className="mt-2">
             <summary className="cursor-pointer">Raw Data</summary>
-            <pre className="mt-2 text-xs">{reportData}</pre>
+            <pre className="mt-2 text-xs">{JSON.stringify(reportData, null, 2)}</pre>
           </details>
         </div>
       );
@@ -750,15 +766,15 @@ export function Reports() {
                 return (
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <div className={`w-4 h-4 rounded ${colors[index % colors.length]}`}></div>
+                      <div className={'w-4 h-4 rounded ' + colors[index % colors.length]}></div>
                       <span className="capitalize font-medium">{method.payment_method}</span>
                     </div>
                     <div className="flex items-center space-x-4">
                       <span className="text-sm text-gray-600">{method.percentage_of_total}%</span>
                       <div className="w-24 bg-gray-200 rounded-full h-2">
                         <div 
-                          className={`h-2 rounded-full ${colors[index % colors.length]}`}
-                          style={{ width: `${method.percentage_of_total}%` }}
+                          className={'h-2 rounded-full ' + colors[index % colors.length]}
+                          style={{ width: method.percentage_of_total + '%' }}
                         ></div>
                       </div>
                     </div>
@@ -816,7 +832,7 @@ export function Reports() {
     
     try {
       const { startDate, endDate } = getDateRange();
-      let data: string;
+      let data: any;
       
       switch (reportType) {
         case 'sales_by_date':

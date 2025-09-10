@@ -63,7 +63,7 @@ async def get_sales_by_date(
                 AVG(total_price) as average_order_value
             FROM sales 
             WHERE DATE(timestamp) BETWEEN :from_date AND :to_date
-            AND is_settled = 1
+            AND is_settled = TRUE
             GROUP BY DATE(timestamp)
             ORDER BY DATE(timestamp) DESC
         """)
@@ -193,7 +193,7 @@ async def get_payment_breakdown(
                 SUM(total_price) as total_amount
             FROM sales 
             WHERE DATE(timestamp) BETWEEN :from_date AND :to_date
-            AND is_settled = 1
+            AND is_settled = TRUE
             GROUP BY payment_method
             ORDER BY total_amount DESC
         """)
